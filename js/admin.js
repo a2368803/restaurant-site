@@ -249,20 +249,57 @@ async function savePhotoLink(id) {
   showToast('連結已儲存');
 }
 
-// YouTube 新增
-document.getElementById('add-youtube-btn').addEventListener('click', async function () {
-  const input = document.getElementById('youtube-url-input');
-  const url = input.value.trim();
+// ── YouTube Modal ─────────────────────────────────────────
+
+function openYtModal() {
+  var modal = document.getElementById('yt-modal');
+  var input = document.getElementById('yt-modal-input');
+  var preview = document.getElementById('yt-modal-preview');
+  input.value = '';
+  preview.innerHTML = '';
+  preview.classList.add('hidden');
+  modal.classList.remove('hidden');
+  setTimeout(function () { input.focus(); }, 300);
+}
+
+function closeYtModal() {
+  document.getElementById('yt-modal').classList.add('hidden');
+}
+
+document.getElementById('open-yt-modal-btn').addEventListener('click', openYtModal);
+document.getElementById('yt-modal-cancel').addEventListener('click', closeYtModal);
+
+// 點遮罩關閉
+document.getElementById('yt-modal').addEventListener('click', function (e) {
+  if (e.target === this) closeYtModal();
+});
+
+// 貼上網址即時預覽影片
+document.getElementById('yt-modal-input').addEventListener('input', function () {
+  var vid = getYouTubeId(this.value.trim());
+  var preview = document.getElementById('yt-modal-preview');
+  if (vid) {
+    preview.innerHTML = '<iframe src="https://www.youtube.com/embed/' + vid + '?rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>';
+    preview.classList.remove('hidden');
+  } else {
+    preview.innerHTML = '';
+    preview.classList.add('hidden');
+  }
+});
+
+// 確認新增
+document.getElementById('yt-modal-confirm').addEventListener('click', async function () {
+  var url = document.getElementById('yt-modal-input').value.trim();
   if (!url) { showToast('請先貼上 YouTube 網址', 'error'); return; }
 
-  const videoId = getYouTubeId(url);
-  if (!videoId) { showToast('無法辨識此 YouTube 網址，請確認格式', 'error'); return; }
+  var videoId = getYouTubeId(url);
+  if (!videoId) { showToast('無法辨識此 YouTube 網址', 'error'); return; }
 
-  const btn = this;
+  var btn = this;
   btn.disabled = true;
   btn.textContent = '新增中…';
 
-  const { error } = await sb.from('photos').insert({
+  var { error } = await sb.from('photos').insert({
     storage_path: '',
     url:          url,
     link_url:     '',
@@ -271,12 +308,12 @@ document.getElementById('add-youtube-btn').addEventListener('click', async funct
   });
 
   btn.disabled = false;
-  btn.textContent = '新增';
+  btn.textContent = '加入影片';
 
   if (error) { showToast('新增失敗：' + error.message, 'error'); return; }
 
-  input.value = '';
-  showToast('YouTube 影片已新增！');
+  closeYtModal();
+  showToast('YouTube 影片已加入！');
   loadPhotos();
 });
 

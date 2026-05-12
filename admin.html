@@ -80,18 +80,12 @@
       </label>
       <p style="font-size:0.78rem;color:#8b7355;margin-top:-14px;margin-bottom:20px;">可一次選取多張，支援手機相機拍攝</p>
 
-      <!-- 新增 YouTube 影片 -->
-      <div style="background:#fff;border:1px solid #e8d5c4;border-radius:12px;padding:16px;margin-bottom:20px;">
-        <p style="font-size:0.82rem;font-weight:700;color:#8b7355;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff0000"><path d="M21.8 8s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16.2 5 12 5 12 5s-4.2 0-7 .1c-.4.1-1.2.1-2 .9-.6.6-.8 2-.8 2S2 9.6 2 11.2v1.5c0 1.6.2 3.2.2 3.2s.2 1.4.8 2c.8.8 1.8.7 2.2.8C6.8 19 12 19 12 19s4.2 0 7-.2c.4-.1 1.2-.1 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.2v-1.5C22 9.6 21.8 8 21.8 8z"/><polygon fill="#fff" points="10,15 15,12 10,9"/></svg>
-          貼上 YouTube 網址
-        </p>
-        <div style="display:flex;gap:8px;">
-          <input type="url" id="youtube-url-input" placeholder="https://www.youtube.com/watch?v=..." style="flex:1;">
-          <button type="button" id="add-youtube-btn" class="btn btn-primary" style="flex-shrink:0;padding:12px 16px;">新增</button>
-        </div>
-        <p style="font-size:0.75rem;color:#8b7355;margin-top:6px;">支援 youtube.com/watch、youtu.be、Shorts 網址</p>
-      </div>
+      <!-- 新增 YouTube 影片按鈕 -->
+      <button type="button" id="open-yt-modal-btn" class="upload-area" style="border:2px dashed #e8d5c4;cursor:pointer;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff0000"><path d="M21.8 8s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16.2 5 12 5 12 5s-4.2 0-7 .1c-.4.1-1.2.1-2 .9-.6.6-.8 2-.8 2S2 9.6 2 11.2v1.5c0 1.6.2 3.2.2 3.2s.2 1.4.8 2c.8.8 1.8.7 2.2.8C6.8 19 12 19 12 19s4.2 0 7-.2c.4-.1 1.2-.1 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.2v-1.5C22 9.6 21.8 8 21.8 8z"/><polygon fill="#fff" points="10,15 15,12 10,9"/></svg>
+        <span>新增 YouTube 影片</span>
+      </button>
+      <p style="font-size:0.78rem;color:#8b7355;margin-top:-14px;margin-bottom:20px;">點擊後輸入網址即可加入</p>
 
       <div id="photos-list"></div>
     </div>
@@ -183,6 +177,23 @@
     </div>
 
   </div><!-- /admin-screen -->
+
+  <!-- ── YouTube 輸入 Modal ────────────────────── -->
+  <div id="yt-modal" class="yt-modal hidden" role="dialog" aria-modal="true">
+    <div class="yt-modal-card">
+      <h3 class="yt-modal-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#ff0000"><path d="M21.8 8s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16.2 5 12 5 12 5s-4.2 0-7 .1c-.4.1-1.2.1-2 .9-.6.6-.8 2-.8 2S2 9.6 2 11.2v1.5c0 1.6.2 3.2.2 3.2s.2 1.4.8 2c.8.8 1.8.7 2.2.8C6.8 19 12 19 12 19s4.2 0 7-.2c.4-.1 1.2-.1 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.2v-1.5C22 9.6 21.8 8 21.8 8z"/><polygon fill="#fff" points="10,15 15,12 10,9"/></svg>
+        新增 YouTube 影片
+      </h3>
+      <p class="yt-modal-hint">貼上任何 YouTube 影片、Shorts 或 youtu.be 短網址</p>
+      <input type="url" id="yt-modal-input" class="yt-modal-input" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+      <div id="yt-modal-preview" class="yt-modal-preview hidden"></div>
+      <div class="yt-modal-btns">
+        <button type="button" id="yt-modal-cancel" class="btn btn-secondary">取消</button>
+        <button type="button" id="yt-modal-confirm" class="btn btn-primary">加入影片</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ── Toast Notification ───────────────────── -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

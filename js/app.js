@@ -58,8 +58,28 @@ function initScrollTracking() {
 // ── Facebook Pixel ───────────────────────────────────────
 
 function injectPixel(pixelId) {
-  if (!pixelId || pixelId.trim() === '') return;
-  const s = document.createElement('script');
+  if (!pixelId || pixelId.trim() === '') {
+    localStorage.removeItem('_fbpx');
+    return;
+  }
+  var pid = pixelId.trim();
+  var cachedPid = localStorage.getItem('_fbpx');
+
+  // 更新快取，讓下次訪問能立即從 <head> 觸發
+  localStorage.setItem('_fbpx', pid);
+
+  if (window.fbq) {
+    // Pixel 已由 <head> 快取腳本初始化
+    // 若 Pixel ID 有變更，補充註冊新 ID 並補送 PageView
+    if (cachedPid && cachedPid !== pid) {
+      fbq('init', pid);
+      fbq('track', 'PageView');
+    }
+    return;
+  }
+
+  // 首次訪問（尚無快取）：現在注入並觸發
+  var s = document.createElement('script');
   s.innerHTML = [
     '!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?',
     'n.callMethod.apply(n,arguments):n.queue.push(arguments)};',
@@ -68,7 +88,7 @@ function injectPixel(pixelId) {
     't.src=v;s=b.getElementsByTagName(e)[0];',
     's.parentNode.insertBefore(t,s)}(window,document,\'script\',',
     '\'https://connect.facebook.net/en_US/fbevents.js\');',
-    'fbq(\'init\',\'' + pixelId.trim() + '\');fbq(\'track\',\'PageView\');'
+    'fbq(\'init\',\'' + pid + '\');fbq(\'track\',\'PageView\');'
   ].join('');
   document.head.appendChild(s);
 }

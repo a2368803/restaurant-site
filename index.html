@@ -9,6 +9,32 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <!-- ── 極早期執行：Session ID + FB Pixel 快取 ─── -->
+  <script>
+  (function(){
+    // 盡早生成 Session ID（scroll tracking 用）
+    if (!sessionStorage.getItem('_sid')) {
+      sessionStorage.setItem('_sid',
+        (typeof crypto !== 'undefined' && crypto.randomUUID)
+          ? crypto.randomUUID()
+          : Date.now().toString(36) + Math.random().toString(36).slice(2)
+      );
+    }
+    // 從 localStorage 快取立即觸發 FB Pixel
+    var pid = localStorage.getItem('_fbpx');
+    if (!pid) return;
+    !function(f,b,e,v,n,t,s){
+      if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)
+    }(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', pid);
+    fbq('track', 'PageView');
+  })();
+  </script>
 </head>
 <body>
 

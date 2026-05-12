@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+
+Sitemap: https://a2368803.github.io/restaurant-site/sitemap.xml

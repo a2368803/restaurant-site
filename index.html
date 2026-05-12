@@ -4,15 +4,41 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#8b5e3c">
+
+  <!-- ── SEO 基底（動態覆寫）──────────────────────── -->
   <title>餐廳</title>
+  <meta name="description" content="">
+  <meta name="keywords" content="餐廳,美食,訂位">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://a2368803.github.io/restaurant-site/">
+
+  <!-- Open Graph -->
+  <meta property="og:type"        content="restaurant.restaurant">
+  <meta property="og:site_name"   content="">
+  <meta property="og:title"       content="餐廳">
+  <meta property="og:description" content="">
+  <meta property="og:url"         content="https://a2368803.github.io/restaurant-site/">
+  <meta property="og:locale"      content="zh_TW">
+  <meta property="og:image"       content="">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card"        content="summary_large_image">
+  <meta name="twitter:title"       content="餐廳">
+  <meta name="twitter:description" content="">
+  <meta name="twitter:image"       content="">
+
+  <!-- Geo meta（本地 SEO）-->
+  <meta name="geo.region"   content="TW">
+  <meta name="geo.placename" content="">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+
   <!-- ── 極早期執行：Session ID + FB Pixel 快取 ─── -->
   <script>
   (function(){
-    // 盡早生成 Session ID（scroll tracking 用）
     if (!sessionStorage.getItem('_sid')) {
       sessionStorage.setItem('_sid',
         (typeof crypto !== 'undefined' && crypto.randomUUID)
@@ -20,7 +46,6 @@
           : Date.now().toString(36) + Math.random().toString(36).slice(2)
       );
     }
-    // 從 localStorage 快取立即觸發 FB Pixel
     var pid = localStorage.getItem('_fbpx');
     if (!pid) return;
     !function(f,b,e,v,n,t,s){
@@ -49,7 +74,10 @@
   </div>
 
   <!-- ── 媒體列表（照片 + 影片依序排列）────────── -->
-  <section id="media-section" class="media-section" aria-label="媒體列表"></section>
+  <main id="media-section" class="media-section" aria-label="媒體列表"></main>
+
+  <!-- ── SEO / GEO 語意內容（爬蟲可見，視覺隱藏）── -->
+  <div id="seo-content" class="seo-only" aria-hidden="true"></div>
 
   <!-- ── 地址 + 地圖 ──────────────────────────── -->
   <section id="address-section" class="address-section">

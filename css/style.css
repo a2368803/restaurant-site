@@ -21,6 +21,17 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* 爬蟲可讀、視覺不顯示的語意內容 */
+.seo-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ── Media List ──────────────────────── */
 .media-section {
   width: 100%;

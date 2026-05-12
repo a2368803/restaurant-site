@@ -161,6 +161,117 @@ function initMediaList(items) {
   });
 }
 
+// ── SEO / GEO ────────────────────────────────────────────
+
+function setMeta(nameOrProp, content) {
+  if (!content) return;
+  var isOG = nameOrProp.indexOf(':') !== -1;
+  var selector = isOG
+    ? 'meta[property="' + nameOrProp + '"]'
+    : 'meta[name="' + nameOrProp + '"]';
+  var el = document.querySelector(selector);
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute(isOG ? 'property' : 'name', nameOrProp);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('content', content);
+}
+
+function updateSEO(settings, firstImageUrl) {
+  function get(k) {
+    var f = settings.find(function (s) { return s.key === k; });
+    return f ? (f.value || '') : '';
+  }
+
+  var name     = get('store_name') || '我的餐廳';
+  var desc     = get('meta_description') || (name + ' — 提供精緻料理，歡迎來電訂位或線上預約');
+  var cuisine  = get('cuisine_type');
+  var price    = get('price_range');
+  var hours    = get('opening_hours_text');
+  var phone    = get('phone_number');
+  var address  = get('address_text');
+  var resUrl   = get('reservation_url');
+  var keywords = get('seo_keywords') || (name + (cuisine ? ',' + cuisine : '') + ',餐廳,訂位,美食,台灣');
+  var siteUrl  = 'https://a2368803.github.io/restaurant-site/';
+
+  // ── 基礎 meta ──
+  document.title = name;
+  setMeta('description', desc);
+  setMeta('keywords', keywords);
+  setMeta('geo.placename', address || name);
+
+  // ── Open Graph ──
+  setMeta('og:site_name',   name);
+  setMeta('og:title',       name);
+  setMeta('og:description', desc);
+  if (firstImageUrl) setMeta('og:image', firstImageUrl);
+
+  // ── Twitter Card ──
+  setMeta('twitter:title',       name);
+  setMeta('twitter:description', desc);
+  if (firstImageUrl) setMeta('twitter:image', firstImageUrl);
+
+  // ── JSON-LD：Restaurant Schema（本地 SEO）──
+  var schema = {
+    '@context': 'https://schema.org',
+    '@type': 'Restaurant',
+    'name': name,
+    'url': siteUrl,
+    'description': desc
+  };
+  if (phone)   schema.telephone = phone;
+  if (address) schema.address = { '@type': 'PostalAddress', 'streetAddress': address, 'addressLocality': '台灣', 'addressCountry': 'TW' };
+  if (cuisine) schema.servesCuisine = cuisine;
+  if (price)   schema.priceRange = price;
+  if (resUrl)  { schema.reservations = resUrl; schema.acceptsReservations = 'True'; }
+  if (firstImageUrl) schema.image = firstImageUrl;
+  if (hours)   schema.openingHours = hours.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+
+  // ── JSON-LD：FAQPage Schema（GEO — AI 搜尋引擎優化）──
+  var faqs = [];
+  if (address) faqs.push({ q: name + ' 地址在哪裡？', a: '地址：' + address });
+  if (phone)   faqs.push({ q: '如何聯絡 ' + name + '？', a: '電話：' + phone });
+  if (hours)   faqs.push({ q: name + ' 的營業時間是？', a: hours });
+  if (cuisine) faqs.push({ q: name + ' 提供什麼料理？', a: '提供' + cuisine + '料理。' });
+  if (price)   faqs.push({ q: name + ' 的價位大約是多少？', a: '價位：' + price });
+  if (resUrl)  faqs.push({ q: '如何在 ' + name + ' 訂位？', a: '可透過線上訂位系統預約：' + resUrl });
+
+  var ldBlocks = [schema];
+  if (faqs.length) {
+    ldBlocks.push({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      'mainEntity': faqs.map(function (f) {
+        return { '@type': 'Question', 'name': f.q, 'acceptedAnswer': { '@type': 'Answer', 'text': f.a } };
+      })
+    });
+  }
+
+  var ldEl = document.getElementById('json-ld');
+  if (!ldEl) {
+    ldEl = document.createElement('script');
+    ldEl.id = 'json-ld';
+    ldEl.type = 'application/ld+json';
+    document.head.appendChild(ldEl);
+  }
+  ldEl.textContent = JSON.stringify(ldBlocks, null, 0);
+
+  // ── 隱藏語意內容區（給爬蟲讀，不影響視覺）──
+  var seoEl = document.getElementById('seo-content');
+  if (seoEl) {
+    var lines = ['<h1>' + name + '</h1>'];
+    if (desc)    lines.push('<p>' + desc + '</p>');
+    if (cuisine) lines.push('<p>料理類型：' + cuisine + '</p>');
+    if (price)   lines.push('<p>價位：' + price + '</p>');
+    if (address) lines.push('<address>地址：' + address + '</address>');
+    if (phone)   lines.push('<p>電話：<a href="tel:' + phone.replace(/\s/g,'') + '">' + phone + '</a></p>');
+    if (hours)   lines.push('<p>營業時間：' + hours.replace(/\n/g,'、') + '</p>');
+    if (resUrl)  lines.push('<p>線上訂位：<a href="' + resUrl + '">' + resUrl + '</a></p>');
+    seoEl.innerHTML = lines.join('');
+  }
+}
+
 // ── Apply Settings to DOM ────────────────────────────────
 
 function applySettings(settings) {
@@ -284,6 +395,9 @@ async function init() {
   if (settingsRes.data) {
     applySettings(settingsRes.data);
     initPromo(settingsRes.data);
+    // 取第一張圖片作為 OG Image
+    var firstImage = photosRes.data && photosRes.data.find(function (p) { return p.media_type !== 'youtube'; });
+    updateSEO(settingsRes.data, firstImage ? firstImage.url : '');
   }
   if (photosRes.data) {
     initMediaList(photosRes.data);

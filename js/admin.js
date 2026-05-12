@@ -363,6 +363,11 @@ async function loadSettings() {
   document.getElementById('s-fb-pixel').value      = get('facebook_pixel_id');
   document.getElementById('s-address').value       = get('address_text');
   document.getElementById('s-maps').value          = get('google_maps_embed_url');
+  document.getElementById('s-meta-desc').value     = get('meta_description');
+  document.getElementById('s-cuisine').value       = get('cuisine_type');
+  document.getElementById('s-price').value         = get('price_range');
+  document.getElementById('s-hours').value         = get('opening_hours_text');
+  document.getElementById('s-keywords').value      = get('seo_keywords');
 }
 
 document.getElementById('settings-form').addEventListener('submit', async function (e) {
@@ -378,7 +383,12 @@ document.getElementById('settings-form').addEventListener('submit', async functi
     ['reservation_url',      document.getElementById('s-res-url').value],
     ['facebook_pixel_id',    document.getElementById('s-fb-pixel').value],
     ['address_text',         document.getElementById('s-address').value],
-    ['google_maps_embed_url',document.getElementById('s-maps').value]
+    ['google_maps_embed_url',document.getElementById('s-maps').value],
+    ['meta_description',     document.getElementById('s-meta-desc').value],
+    ['cuisine_type',         document.getElementById('s-cuisine').value],
+    ['price_range',          document.getElementById('s-price').value],
+    ['opening_hours_text',   document.getElementById('s-hours').value],
+    ['seo_keywords',         document.getElementById('s-keywords').value]
   ];
 
   const upserts = pairs.map(function (p) { return { key: p[0], value: p[1] }; });

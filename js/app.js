@@ -36,7 +36,7 @@ async function trackEvent(type) {
 }
 
 function initScrollTracking() {
-  const heroEl = document.querySelector('.carousel-section');
+  const heroEl = document.getElementById('media-section');
   let heroPassed = false, s33 = false, s67 = false, s100 = false;
 
   window.addEventListener('scroll', function () {
@@ -110,120 +110,55 @@ function getYouTubeId(url) {
   return null;
 }
 
-// ── Carousel ─────────────────────────────────────────────
+// ── Media List（照片 + 影片依序排列）────────────────────
 
-function initCarousel(items) {
-  const section = document.querySelector('.carousel-section');
-  const track   = document.querySelector('.carousel-track');
-  const dotsEl  = document.querySelector('.carousel-dots');
+function initMediaList(items) {
+  var section = document.getElementById('media-section');
 
   if (!items || !items.length) {
-    section.innerHTML = '<div class="carousel-empty">尚未上傳照片或影片</div>';
+    section.innerHTML = '<div class="media-empty">尚未新增任何照片或影片</div>';
     return;
   }
 
-  let current = 0;
-  let timer   = null;
-
   items.forEach(function (item, i) {
-    const slide = document.createElement('div');
-    slide.className = 'carousel-slide';
+    var el = document.createElement('div');
+    el.className = 'media-item';
 
     if (item.media_type === 'youtube') {
-      // ── YouTube 影片 slide ──
-      const videoId = getYouTubeId(item.url);
+      var videoId = getYouTubeId(item.url);
       if (!videoId) return;
-
-      const wrap = document.createElement('div');
-      wrap.style.cssText = 'position:relative;width:100%;height:100%;background:#000;';
-
-      const iframe = document.createElement('iframe');
-      iframe.src = 'https://www.youtube.com/embed/' + videoId
-        + '?rel=0&playsinline=1&color=white';
-      iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;';
+      var wrap = document.createElement('div');
+      wrap.className = 'video-wrap';
+      var iframe = document.createElement('iframe');
+      iframe.src = 'https://www.youtube.com/embed/' + videoId + '?rel=0&playsinline=1';
       iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
       iframe.allowFullscreen = true;
       iframe.loading = 'lazy';
-      iframe.title = 'YouTube 影片 ' + (i + 1);
-
+      iframe.title = 'YouTube 影片';
       wrap.appendChild(iframe);
-      slide.appendChild(wrap);
+      el.appendChild(wrap);
 
     } else {
-      // ── 圖片 slide ──
-      let wrapper;
-      if (item.link_url && item.link_url.trim()) {
-        wrapper = document.createElement('a');
-        wrapper.href = item.link_url.trim();
-        wrapper.target = '_blank';
-        wrapper.rel = 'noopener noreferrer';
-      } else {
-        wrapper = document.createElement('span');
-      }
-
-      const img = document.createElement('img');
+      var img = document.createElement('img');
       img.src = item.url;
-      img.alt = '輪播圖片 ' + (i + 1);
+      img.alt = '照片 ' + (i + 1);
       img.loading = i === 0 ? 'eager' : 'lazy';
       img.draggable = false;
 
-      wrapper.appendChild(img);
-      slide.appendChild(wrapper);
+      if (item.link_url && item.link_url.trim()) {
+        var a = document.createElement('a');
+        a.href = item.link_url.trim();
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.appendChild(img);
+        el.appendChild(a);
+      } else {
+        el.appendChild(img);
+      }
     }
 
-    track.appendChild(slide);
-
-    const dot = document.createElement('button');
-    dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
-    dot.setAttribute('aria-label', '第 ' + (i + 1) + (item.media_type === 'youtube' ? ' 影片' : ' 張'));
-    dot.addEventListener('click', function () { goTo(i); });
-    dotsEl.appendChild(dot);
+    section.appendChild(el);
   });
-
-  function isYouTubeSlide(idx) {
-    return items[idx] && items[idx].media_type === 'youtube';
-  }
-
-  function goTo(idx) {
-    current = (idx + items.length) % items.length;
-    track.style.transform = 'translateX(-' + (current * 100) + '%)';
-    dotsEl.querySelectorAll('.carousel-dot').forEach(function (d, i) {
-      d.classList.toggle('active', i === current);
-    });
-    // 播影片時停止自動輪播，回到圖片後恢復
-    if (isYouTubeSlide(current)) {
-      stopTimer();
-    } else {
-      stopTimer();
-      startTimer();
-    }
-  }
-
-  function startTimer() {
-    if (items.length < 2) return;
-    clearInterval(timer);
-    timer = setInterval(function () {
-      // 若目前是影片，不強制跳過
-      if (!isYouTubeSlide(current)) goTo(current + 1);
-    }, 4500);
-  }
-  function stopTimer() { clearInterval(timer); timer = null; }
-
-  startTimer();
-
-  // 觸控滑動（圖片用，影片 slide 上 iframe 會攔截觸控，為正常現象）
-  let tx = 0;
-  track.addEventListener('touchstart', function (e) {
-    if (isYouTubeSlide(current)) return;
-    tx = e.changedTouches[0].screenX;
-    stopTimer();
-  }, { passive: true });
-  track.addEventListener('touchend', function (e) {
-    if (isYouTubeSlide(current)) return;
-    const diff = tx - e.changedTouches[0].screenX;
-    if (Math.abs(diff) > 40) goTo(current + (diff > 0 ? 1 : -1));
-    else startTimer();
-  }, { passive: true });
 }
 
 // ── Apply Settings to DOM ────────────────────────────────
@@ -357,7 +292,7 @@ async function init() {
     initPromo(settingsRes.data);
   }
   if (photosRes.data) {
-    initCarousel(photosRes.data);
+    initMediaList(photosRes.data);
   }
 }
 

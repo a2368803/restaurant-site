@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>後台管理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <!-- ── 設定未完成提示 ────────────────────────── -->
+  <div id="setup-banner" class="setup-banner">
+    ⚠️ 請先開啟 <code>config.js</code>，填入 Supabase 的 <code>SUPABASE_URL</code> 與 <code>SUPABASE_ANON_KEY</code>，再重新整理此頁。
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 登入畫面                                   -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <span class="icon">🍽️</span>
+        <h1>後台管理</h1>
+        <p>請輸入帳號密碼登入</p>
+      </div>
+      <div id="login-error" class="login-error"></div>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-email">電子郵件</label>
+          <input type="email" id="login-email" placeholder="admin@example.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="login-password">密碼</label>
+          <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" id="login-btn" class="btn btn-primary btn-full" style="margin-top:8px;">登入後台</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 後台主畫面                                  -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="admin-screen" class="admin-screen">
+
+    <!-- Header -->
+    <header class="admin-header">
+      <h1>⚙️ 後台管理</h1>
+      <button id="logout-btn" class="btn-logout">登出</button>
+    </header>
+
+    <!-- Tab Nav -->
+    <nav class="tab-nav" role="tablist">
+      <button class="tab-btn active" data-tab="analytics" role="tab" aria-selected="true">📊 數據</button>
+      <button class="tab-btn" data-tab="photos"    role="tab" aria-selected="false">🖼 照片</button>
+      <button class="tab-btn" data-tab="settings"  role="tab" aria-selected="false">⚙️ 設定</button>
+      <button class="tab-btn" data-tab="promo"     role="tab" aria-selected="false">🎁 優惠</button>
+    </nav>
+
+    <!-- ── 數據 Tab ─────────────────────────── -->
+    <div id="tab-analytics" class="tab-content active">
+      <div id="analytics-content">
+        <div class="loading">載入中</div>
+      </div>
+    </div>
+
+    <!-- ── 照片 Tab ─────────────────────────── -->
+    <div id="tab-photos" class="tab-content">
+      <div class="tab-title">照片管理</div>
+
+      <label class="upload-area">
+        <input type="file" id="photo-upload" accept="image/*" multiple>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span id="upload-label-text">+ 上傳照片</span>
+      </label>
+      <p style="font-size:0.78rem;color:#8b7355;margin-top:-14px;margin-bottom:18px;">可一次選取多張，支援手機相機拍攝</p>
+
+      <div id="photos-list"></div>
+    </div>
+
+    <!-- ── 設定 Tab ─────────────────────────── -->
+    <div id="tab-settings" class="tab-content">
+      <div class="tab-title">基本設定</div>
+      <form id="settings-form">
+
+        <div class="form-group">
+          <label for="s-store-name">店名</label>
+          <input type="text" id="s-store-name" placeholder="我的餐廳">
+        </div>
+
+        <div class="form-group">
+          <label for="s-store-tagline">副標語（選填）</label>
+          <input type="text" id="s-store-tagline" placeholder="傳遞家的味道">
+        </div>
+
+        <div class="form-group">
+          <label for="s-phone">電話號碼</label>
+          <input type="tel" id="s-phone" placeholder="0912-345-678">
+          <p class="hint">前台「立即電話」按鈕將使用此號碼</p>
+        </div>
+
+        <div class="form-group">
+          <label for="s-res-url">訂位網址</label>
+          <input type="url" id="s-res-url" placeholder="https://booking.example.com">
+          <p class="hint">前台「線上訂位」按鈕將連到此網址</p>
+        </div>
+
+        <div class="form-group">
+          <label for="s-fb-pixel">Facebook 像素 ID</label>
+          <input type="text" id="s-fb-pixel" placeholder="1234567890">
+          <p class="hint">只填數字 ID，系統自動嵌入 Pixel 追蹤碼</p>
+        </div>
+
+        <div class="form-group">
+          <label for="s-address">地址文字</label>
+          <input type="text" id="s-address" placeholder="台北市信義區忠孝東路五段1號">
+        </div>
+
+        <div class="form-group">
+          <label for="s-maps">Google Maps 嵌入網址</label>
+          <textarea id="s-maps" placeholder="https://www.google.com/maps/embed?pb=..."></textarea>
+          <p class="hint">Google Maps > 分享 > 嵌入地圖 > 複製 src="" 裡的網址</p>
+        </div>
+
+        <button type="submit" id="save-settings-btn" class="btn btn-primary btn-full">儲存設定</button>
+      </form>
+    </div>
+
+    <!-- ── 優惠 Tab ─────────────────────────── -->
+    <div id="tab-promo" class="tab-content">
+      <div class="tab-title">今日優惠彈跳視窗</div>
+      <p style="font-size:0.82rem;color:#8b7355;margin-bottom:18px;line-height:1.6;">
+        啟用後，訪客進站時會先看到優惠視窗，按叉叉關閉後繼續瀏覽。
+      </p>
+
+      <div class="toggle-row">
+        <span>啟用今日優惠</span>
+        <label class="toggle">
+          <input type="checkbox" id="promo-toggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label for="promo-title-input">優惠標題</label>
+        <input type="text" id="promo-title-input" placeholder="例：今日特餐 85 折 🎉">
+      </div>
+
+      <div class="form-group">
+        <label for="promo-content-input">優惠說明</label>
+        <textarea id="promo-content-input" placeholder="輸入優惠詳細說明…&#10;可以換行描述條件、有效時間等。" style="min-height:120px;"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>優惠圖片（選填）</label>
+        <img id="promo-img-preview" class="promo-img-preview" src="" alt="優惠圖片預覽" style="display:none;">
+        <label class="upload-sm">
+          <input type="file" id="promo-image-upload" accept="image/*">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          上傳優惠圖片
+        </label>
+      </div>
+
+      <button id="save-promo-btn" class="btn btn-primary btn-full">儲存優惠設定</button>
+    </div>
+
+  </div><!-- /admin-screen -->
+
+  <!-- ── Toast Notification ───────────────────── -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- ── Scripts ──────────────────────────────── -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

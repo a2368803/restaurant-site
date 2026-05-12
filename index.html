@@ -48,12 +48,6 @@
     </div>
   </div>
 
-  <!-- ── Header ───────────────────────────────── -->
-  <header class="site-header">
-    <div id="site-name" class="site-name">餐廳</div>
-    <div id="site-tagline" class="site-tagline" style="display:none;"></div>
-  </header>
-
   <!-- ── 媒體列表（照片 + 影片依序排列）────────── -->
   <section id="media-section" class="media-section" aria-label="媒體列表"></section>
 
@@ -88,14 +82,5 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
   <script src="js/app.js"></script>
-  <script>
-    // Sync store name to footer
-    const obs = new MutationObserver(function() {
-      const n = document.getElementById('site-name');
-      const f = document.getElementById('footer-name');
-      if (n && f) f.textContent = '© ' + new Date().getFullYear() + ' ' + n.textContent;
-    });
-    obs.observe(document.getElementById('site-name'), { childList: true, characterData: true, subtree: true });
-  </script>
 </body>
 </html>

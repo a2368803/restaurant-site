@@ -170,16 +170,10 @@ function applySettings(settings) {
   }
 
   const storeName = get('store_name') || '我的餐廳';
-  const nameEl = document.getElementById('site-name');
-  if (nameEl) nameEl.textContent = storeName;
   document.title = storeName;
 
-  const tagline = get('store_tagline');
-  const taglineEl = document.getElementById('site-tagline');
-  if (taglineEl) {
-    taglineEl.textContent = tagline;
-    taglineEl.style.display = tagline ? '' : 'none';
-  }
+  const footerEl = document.getElementById('footer-name');
+  if (footerEl) footerEl.textContent = '© ' + new Date().getFullYear() + ' ' + storeName;
 
   const phone = get('phone_number');
   const callBtn = document.getElementById('cta-call');

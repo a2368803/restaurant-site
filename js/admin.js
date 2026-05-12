@@ -3,6 +3,23 @@
 const { createClient } = window.supabase;
 let sb = null;
 
+// ── YouTube helper ────────────────────────────────────────
+
+function getYouTubeId(url) {
+  if (!url) return null;
+  var patterns = [
+    /youtu\.be\/([^?&#/\s]+)/,
+    /youtube\.com\/watch\?.*[?&]v=([^?&#/\s]+)/,
+    /youtube\.com\/embed\/([^?&#/\s]+)/,
+    /youtube\.com\/shorts\/([^?&#/\s]+)/
+  ];
+  for (var i = 0; i < patterns.length; i++) {
+    var m = url.match(patterns[i]);
+    if (m) return m[1];
+  }
+  return null;
+}
+
 // ── Init ─────────────────────────────────────────────────
 
 function initSupabase() {
@@ -151,22 +168,43 @@ function renderPhotos() {
   const list = document.getElementById('photos-list');
 
   if (!allPhotos.length) {
-    list.innerHTML = '<p class="empty-msg">尚未上傳任何照片，點擊上方按鈕上傳</p>';
+    list.innerHTML = '<p class="empty-msg">尚未上傳任何照片或影片，點擊上方新增</p>';
     return;
   }
 
-  list.innerHTML = allPhotos.map(function (photo, i) {
+  list.innerHTML = allPhotos.map(function (item, i) {
+    const isYT = item.media_type === 'youtube';
+    const ytId = isYT ? getYouTubeId(item.url) : null;
+
+    // 縮圖：YouTube 用官方縮圖，圖片用本身 URL
+    const thumbHtml = isYT && ytId
+      ? [
+          '<div class="photo-thumb" style="background:#000;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">',
+          '  <img src="https://img.youtube.com/vi/' + ytId + '/hqdefault.jpg" style="width:100%;height:100%;object-fit:cover;opacity:0.85;">',
+          '  <svg style="position:absolute;pointer-events:none;" width="28" height="28" viewBox="0 0 24 24" fill="#ff0000"><path d="M21.8 8s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16.2 5 12 5 12 5s-4.2 0-7 .1c-.4.1-1.2.1-2 .9-.6.6-.8 2-.8 2S2 9.6 2 11.2v1.5c0 1.6.2 3.2.2 3.2s.2 1.4.8 2c.8.8 1.8.7 2.2.8C6.8 19 12 19 12 19s4.2 0 7-.2c.4-.1 1.2-.1 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.2v-1.5C22 9.6 21.8 8 21.8 8z"/><polygon fill="#fff" points="10,15 15,12 10,9"/></svg>',
+          '</div>'
+        ].join('')
+      : '<img src="' + item.url + '" alt="照片" class="photo-thumb">';
+
+    // 影片只顯示網址（唯讀），圖片顯示可編輯的連結輸入框
+    const inputHtml = isYT
+      ? '<p style="font-size:0.78rem;color:#8b7355;word-break:break-all;margin:0;">' + item.url + '</p>'
+      : '<input type="url" class="photo-link-input" data-id="' + item.id + '" value="' + (item.link_url || '') + '" placeholder="點擊後開啟的連結網址（選填）">';
+
+    const linkBtnHtml = isYT
+      ? ''
+      : '<button class="btn-sm primary" onclick="savePhotoLink(\'' + item.id + '\')">儲存連結</button>';
+
     return [
-      '<div class="photo-item" data-id="' + photo.id + '">',
-      '  <img src="' + photo.url + '" alt="照片" class="photo-thumb">',
+      '<div class="photo-item" data-id="' + item.id + '">',
+      thumbHtml,
       '  <div class="photo-info">',
-      '    <input type="url" class="photo-link-input" data-id="' + photo.id + '"',
-      '      value="' + (photo.link_url || '') + '" placeholder="點擊後開啟的連結網址（選填）">',
+      inputHtml,
       '    <div class="photo-actions" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">',
-      (i > 0 ? '<button class="btn-sm" onclick="movePhoto(\'' + photo.id + '\',\'up\')">↑ 上移</button>' : ''),
-      (i < allPhotos.length - 1 ? '<button class="btn-sm" onclick="movePhoto(\'' + photo.id + '\',\'down\')">↓ 下移</button>' : ''),
-      '<button class="btn-sm primary" onclick="savePhotoLink(\'' + photo.id + '\')">儲存連結</button>',
-      '<button class="btn-sm danger"  onclick="deletePhoto(\'' + photo.id + '\',\'' + photo.storage_path + '\')">刪除</button>',
+      (i > 0 ? '<button class="btn-sm" onclick="movePhoto(\'' + item.id + '\',\'up\')">↑ 上移</button>' : ''),
+      (i < allPhotos.length - 1 ? '<button class="btn-sm" onclick="movePhoto(\'' + item.id + '\',\'down\')">↓ 下移</button>' : ''),
+      linkBtnHtml,
+      '<button class="btn-sm danger" onclick="deletePhoto(\'' + item.id + '\',\'' + (item.storage_path || '') + '\',\'' + item.media_type + '\')">刪除</button>',
       '    </div>',
       '  </div>',
       '</div>'
@@ -211,11 +249,45 @@ async function savePhotoLink(id) {
   showToast('連結已儲存');
 }
 
-async function deletePhoto(id, storagePath) {
-  if (!confirm('確定要刪除這張照片嗎？')) return;
-  await sb.storage.from('photos').remove([storagePath]);
+// YouTube 新增
+document.getElementById('add-youtube-btn').addEventListener('click', async function () {
+  const input = document.getElementById('youtube-url-input');
+  const url = input.value.trim();
+  if (!url) { showToast('請先貼上 YouTube 網址', 'error'); return; }
+
+  const videoId = getYouTubeId(url);
+  if (!videoId) { showToast('無法辨識此 YouTube 網址，請確認格式', 'error'); return; }
+
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = '新增中…';
+
+  const { error } = await sb.from('photos').insert({
+    storage_path: '',
+    url:          url,
+    link_url:     '',
+    sort_order:   Date.now(),
+    media_type:   'youtube'
+  });
+
+  btn.disabled = false;
+  btn.textContent = '新增';
+
+  if (error) { showToast('新增失敗：' + error.message, 'error'); return; }
+
+  input.value = '';
+  showToast('YouTube 影片已新增！');
+  loadPhotos();
+});
+
+async function deletePhoto(id, storagePath, mediaType) {
+  const label = mediaType === 'youtube' ? '這部影片' : '這張照片';
+  if (!confirm('確定要刪除' + label + '嗎？')) return;
+  if (mediaType !== 'youtube' && storagePath) {
+    await sb.storage.from('photos').remove([storagePath]);
+  }
   await sb.from('photos').delete().eq('id', id);
-  showToast('已刪除照片');
+  showToast('已刪除');
   loadPhotos();
 }
 

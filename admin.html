@@ -72,12 +72,26 @@
     <div id="tab-photos" class="tab-content">
       <div class="tab-title">照片管理</div>
 
+      <!-- 上傳照片 -->
       <label class="upload-area">
         <input type="file" id="photo-upload" accept="image/*" multiple>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span id="upload-label-text">+ 上傳照片</span>
       </label>
-      <p style="font-size:0.78rem;color:#8b7355;margin-top:-14px;margin-bottom:18px;">可一次選取多張，支援手機相機拍攝</p>
+      <p style="font-size:0.78rem;color:#8b7355;margin-top:-14px;margin-bottom:20px;">可一次選取多張，支援手機相機拍攝</p>
+
+      <!-- 新增 YouTube 影片 -->
+      <div style="background:#fff;border:1px solid #e8d5c4;border-radius:12px;padding:16px;margin-bottom:20px;">
+        <p style="font-size:0.82rem;font-weight:700;color:#8b7355;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff0000"><path d="M21.8 8s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16.2 5 12 5 12 5s-4.2 0-7 .1c-.4.1-1.2.1-2 .9-.6.6-.8 2-.8 2S2 9.6 2 11.2v1.5c0 1.6.2 3.2.2 3.2s.2 1.4.8 2c.8.8 1.8.7 2.2.8C6.8 19 12 19 12 19s4.2 0 7-.2c.4-.1 1.2-.1 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.2v-1.5C22 9.6 21.8 8 21.8 8z"/><polygon fill="#fff" points="10,15 15,12 10,9"/></svg>
+          貼上 YouTube 網址
+        </p>
+        <div style="display:flex;gap:8px;">
+          <input type="url" id="youtube-url-input" placeholder="https://www.youtube.com/watch?v=..." style="flex:1;">
+          <button type="button" id="add-youtube-btn" class="btn btn-primary" style="flex-shrink:0;padding:12px 16px;">新增</button>
+        </div>
+        <p style="font-size:0.75rem;color:#8b7355;margin-top:6px;">支援 youtube.com/watch、youtu.be、Shorts 網址</p>
+      </div>
 
       <div id="photos-list"></div>
     </div>

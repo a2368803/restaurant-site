@@ -387,15 +387,26 @@ async function init() {
   trackEvent('page_view');
   initScrollTracking();
 
+  // Apply cached settings immediately so page renders without waiting for API
+  var cachedSettings = null;
+  try {
+    var raw = localStorage.getItem('_settings_cache');
+    if (raw) cachedSettings = JSON.parse(raw);
+  } catch (_) {}
+  if (cachedSettings) {
+    applySettings(cachedSettings);
+    initPromo(cachedSettings);
+  }
+
   const [settingsRes, photosRes] = await Promise.all([
     sb.from('settings').select('*'),
     sb.from('photos').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: true })
   ]);
 
   if (settingsRes.data) {
+    try { localStorage.setItem('_settings_cache', JSON.stringify(settingsRes.data)); } catch (_) {}
     applySettings(settingsRes.data);
-    initPromo(settingsRes.data);
-    // 取第一張圖片作為 OG Image
+    if (!cachedSettings) initPromo(settingsRes.data);
     var firstImage = photosRes.data && photosRes.data.find(function (p) { return p.media_type !== 'youtube'; });
     updateSEO(settingsRes.data, firstImage ? firstImage.url : '');
   }

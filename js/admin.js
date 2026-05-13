@@ -212,18 +212,43 @@ function renderPhotos() {
   }).join('');
 }
 
+function compressImage(file) {
+  return new Promise(function (resolve) {
+    if (!file.type.startsWith('image/')) { resolve(file); return; }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var img = new Image();
+      img.onload = function () {
+        var MAX = 1920;
+        var ratio = Math.min(1, MAX / Math.max(img.width, img.height));
+        var canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.width  * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(function (blob) {
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.82);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 document.getElementById('photo-upload').addEventListener('change', async function (e) {
   const files = Array.from(e.target.files);
   if (!files.length) return;
 
   const labelEl = document.getElementById('upload-label-text');
-  labelEl.textContent = '上傳中…';
 
-  for (const file of files) {
-    const ext  = file.name.split('.').pop();
-    const path = Date.now() + '-' + Math.random().toString(36).slice(2) + '.' + ext;
+  for (var i = 0; i < files.length; i++) {
+    labelEl.textContent = '壓縮中 ' + (i + 1) + '/' + files.length + '…';
+    const compressed = await compressImage(files[i]);
 
-    const { error: upErr } = await sb.storage.from('photos').upload(path, file);
+    labelEl.textContent = '上傳中 ' + (i + 1) + '/' + files.length + '…';
+    const path = Date.now() + '-' + Math.random().toString(36).slice(2) + '.jpg';
+
+    const { error: upErr } = await sb.storage.from('photos').upload(path, compressed);
     if (upErr) { showToast('上傳失敗：' + upErr.message, 'error'); continue; }
 
     const { data: pubData } = sb.storage.from('photos').getPublicUrl(path);
@@ -336,13 +361,21 @@ async function movePhoto(id, dir) {
 
   const a = allPhotos[idx];
   const b = allPhotos[targetIdx];
+  const orderA = a.sort_order;
+  const orderB = b.sort_order;
 
+  // Instant visual swap — no waiting for DB
+  allPhotos[idx] = b;
+  allPhotos[targetIdx] = a;
+  renderPhotos();
+
+  // Sync to DB in background
+  a.sort_order = orderB;
+  b.sort_order = orderA;
   await Promise.all([
-    sb.from('photos').update({ sort_order: b.sort_order }).eq('id', a.id),
-    sb.from('photos').update({ sort_order: a.sort_order }).eq('id', b.id)
+    sb.from('photos').update({ sort_order: orderB }).eq('id', a.id),
+    sb.from('photos').update({ sort_order: orderA }).eq('id', b.id)
   ]);
-
-  loadPhotos();
 }
 
 // ── Settings ─────────────────────────────────────────────

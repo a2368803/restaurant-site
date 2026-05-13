@@ -324,7 +324,9 @@ function applySettings(settings) {
   const mapWrapper = document.getElementById('map-wrapper');
   if (mapWrapper) {
     if (mapsUrl) {
-      mapWrapper.innerHTML = '<iframe src="' + mapsUrl + '" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>';
+      mapWrapper.innerHTML =
+        '<div class="map-click-shield" onclick="this.style.display=\'none\'"></div>' +
+        '<iframe src="' + mapsUrl + '" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>';
       mapWrapper.style.display = '';
     } else {
       mapWrapper.style.display = 'none';
@@ -386,6 +388,12 @@ async function init() {
 
   trackEvent('page_view');
   initScrollTracking();
+
+  // Skeleton placeholder keeps page layout stable while photos load
+  var mediaSection = document.getElementById('media-section');
+  if (mediaSection && !mediaSection.children.length) {
+    mediaSection.innerHTML = '<div class="media-placeholder"></div>';
+  }
 
   // Apply cached settings immediately so page renders without waiting for API
   var cachedSettings = null;

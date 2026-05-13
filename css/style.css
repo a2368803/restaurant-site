@@ -97,6 +97,7 @@ body {
   margin-bottom: 24px;
 }
 .map-wrapper {
+  position: relative;
   width: 100%;
   border-radius: var(--radius);
   overflow: hidden;
@@ -109,6 +110,26 @@ body {
   height: 100%;
   border: 0;
   display: block;
+}
+/* 遮罩：防止地圖 iframe 意外攔截手指滑動；點一下啟用互動 */
+.map-click-shield {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: pointer;
+  background: transparent;
+}
+
+/* 照片載入前的佔位骨架，避免地圖被推到頁面頂端 */
+.media-placeholder {
+  width: 100%;
+  min-height: 70vh;
+  background: linear-gradient(180deg, #ede4da 0%, #e4d8cc 100%);
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
 }
 
 /* ── Footer ──────────────────────────── */

@@ -120,6 +120,8 @@ function initMediaList(items) {
     return;
   }
 
+  section.innerHTML = '';
+
   items.forEach(function (item, i) {
     var el = document.createElement('div');
     el.className = 'media-item';

@@ -195,7 +195,7 @@ function updateSEO(settings, firstImageUrl) {
   var address  = get('address_text');
   var resUrl   = get('reservation_url');
   var keywords = get('seo_keywords') || (name + (cuisine ? ',' + cuisine : '') + ',餐廳,訂位,美食,台灣');
-  var siteUrl  = 'https://a2368803.github.io/restaurant-site/';
+  var siteUrl  = 'https://wadawww.vercel.app/';
 
   // ── 基礎 meta ──
   document.title = name;

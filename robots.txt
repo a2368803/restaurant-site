@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin.html
 
-Sitemap: https://a2368803.github.io/restaurant-site/sitemap.xml
+Sitemap: https://wadawww.vercel.app/sitemap.xml

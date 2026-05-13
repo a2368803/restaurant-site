@@ -143,8 +143,13 @@ function initMediaList(items) {
     } else {
       var img = document.createElement('img');
       img.src = item.url;
-      img.alt = '照片 ' + (i + 1);
+      if (item.url_mobile) {
+        img.srcset = item.url_mobile + ' 900w, ' + item.url + ' 1920w';
+        img.sizes  = '100vw';
+      }
+      img.alt     = '照片 ' + (i + 1);
       img.loading = i === 0 ? 'eager' : 'lazy';
+      if (i === 0) img.fetchPriority = 'high';
       img.draggable = false;
 
       if (item.link_url && item.link_url.trim()) {

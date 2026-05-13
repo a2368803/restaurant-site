@@ -218,22 +218,34 @@ function renderPhotos() {
   }).join('');
 }
 
-function compressImage(file) {
+function processImage(file) {
   return new Promise(function (resolve) {
-    if (!file.type.startsWith('image/')) { resolve(file); return; }
+    if (!file.type.startsWith('image/')) {
+      resolve({ desktop: file, mobile: file, originalSize: file.size, compressedSize: file.size });
+      return;
+    }
     var reader = new FileReader();
     reader.onload = function (e) {
       var img = new Image();
       img.onload = function () {
-        var MAX = 1920;
-        var ratio = Math.min(1, MAX / Math.max(img.width, img.height));
-        var canvas = document.createElement('canvas');
-        canvas.width  = Math.round(img.width  * ratio);
-        canvas.height = Math.round(img.height * ratio);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(function (blob) {
-          resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
-        }, 'image/jpeg', 0.82);
+        function makeBlob(maxPx, quality, cb) {
+          var ratio = Math.min(1, maxPx / Math.max(img.width, img.height));
+          var canvas = document.createElement('canvas');
+          canvas.width  = Math.round(img.width  * ratio);
+          canvas.height = Math.round(img.height * ratio);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(cb, 'image/webp', quality);
+        }
+        makeBlob(1920, 0.80, function (desktopBlob) {
+          makeBlob(900, 0.75, function (mobileBlob) {
+            resolve({
+              desktop:        new File([desktopBlob], 'photo.webp',   { type: 'image/webp' }),
+              mobile:         new File([mobileBlob],  'photo_m.webp', { type: 'image/webp' }),
+              originalSize:   file.size,
+              compressedSize: desktopBlob.size
+            });
+          });
+        });
       };
       img.src = e.target.result;
     };
@@ -245,31 +257,45 @@ document.getElementById('photo-upload').addEventListener('change', async functio
   const files = Array.from(e.target.files);
   if (!files.length) return;
 
+  const MB10 = 10 * 1024 * 1024;
+  const bigCount = files.filter(function (f) { return f.size > MB10; }).length;
+  if (bigCount) showToast(bigCount + ' 張圖片超過 10MB，將自動壓縮', 'warn');
+
   const labelEl = document.getElementById('upload-label-text');
 
   for (var i = 0; i < files.length; i++) {
-    labelEl.textContent = '壓縮中 ' + (i + 1) + '/' + files.length + '…';
-    const compressed = await compressImage(files[i]);
+    labelEl.textContent = '處理中 ' + (i + 1) + '/' + files.length + '…';
+    const { desktop, mobile, originalSize, compressedSize } = await processImage(files[i]);
+
+    const saving = originalSize > 0 ? Math.round((1 - compressedSize / originalSize) * 100) : 0;
+    const sizeKB  = Math.round(compressedSize / 1024);
 
     labelEl.textContent = '上傳中 ' + (i + 1) + '/' + files.length + '…';
-    const path = Date.now() + '-' + Math.random().toString(36).slice(2) + '.jpg';
+    const base        = Date.now() + '-' + Math.random().toString(36).slice(2);
+    const pathDesktop = base + '.webp';
+    const pathMobile  = base + '_m.webp';
 
-    const { error: upErr } = await sb.storage.from('photos').upload(path, compressed);
-    if (upErr) { showToast('上傳失敗：' + upErr.message, 'error'); continue; }
+    const { error: e1 } = await sb.storage.from('photos').upload(pathDesktop, desktop);
+    if (e1) { showToast('上傳失敗：' + e1.message, 'error'); continue; }
 
-    const { data: pubData } = sb.storage.from('photos').getPublicUrl(path);
+    await sb.storage.from('photos').upload(pathMobile, mobile);
+
+    const { data: pub1 } = sb.storage.from('photos').getPublicUrl(pathDesktop);
+    const { data: pub2 } = sb.storage.from('photos').getPublicUrl(pathMobile);
 
     await sb.from('photos').insert({
-      storage_path: path,
-      url:          pubData.publicUrl,
+      storage_path: pathDesktop,
+      url:          pub1.publicUrl,
+      url_mobile:   pub2 ? pub2.publicUrl : '',
       link_url:     '',
       sort_order:   Date.now()
     });
+
+    showToast('WebP 轉換完成，節省 ' + saving + '%（' + sizeKB + ' KB）');
   }
 
   labelEl.textContent = '+ 上傳照片';
   e.target.value = '';
-  showToast('上傳成功！');
   loadPhotos();
 });
 
@@ -352,7 +378,9 @@ async function deletePhoto(id, storagePath, mediaType) {
   const label = mediaType === 'youtube' ? '這部影片' : '這張照片';
   if (!confirm('確定要刪除' + label + '嗎？')) return;
   if (mediaType !== 'youtube' && storagePath) {
-    await sb.storage.from('photos').remove([storagePath]);
+    const paths = [storagePath];
+    if (storagePath.endsWith('.webp')) paths.push(storagePath.replace('.webp', '_m.webp'));
+    await sb.storage.from('photos').remove(paths);
   }
   await sb.from('photos').delete().eq('id', id);
   showToast('已刪除');

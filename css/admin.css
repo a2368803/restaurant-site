@@ -530,6 +530,7 @@ textarea {
 }
 .toast.success { background: var(--success); }
 .toast.error   { background: var(--danger); }
+.toast.warn    { background: #e07b2a; }
 
 /* ── Loading ─────────────────────────── */
 .loading {

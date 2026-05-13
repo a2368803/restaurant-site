@@ -167,6 +167,32 @@
           <input type="text" id="s-keywords" placeholder="例：台北日式料理,信義區餐廳,商業午餐,訂位">
         </div>
 
+        <hr style="border:none;border-top:1px solid var(--border);margin:24px 0;">
+        <p style="font-size:0.88rem;font-weight:700;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:6px;">
+          📤 LINE / 社群分享預覽
+        </p>
+
+        <div class="form-group">
+          <label>分享主圖</label>
+          <img id="s-og-img-preview" src="" alt="分享圖片預覽" style="display:none;width:100%;border-radius:8px;margin-bottom:8px;aspect-ratio:1200/630;object-fit:cover;">
+          <label class="upload-sm">
+            <input type="file" id="s-og-image-upload" accept="image/*">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            上傳分享主圖
+          </label>
+          <p class="hint">建議 1200×630px（橫式）— 傳 LINE、FB 時顯示此圖</p>
+        </div>
+
+        <div class="form-group">
+          <label for="s-og-title">分享標題</label>
+          <input type="text" id="s-og-title" placeholder="留空則使用店名">
+        </div>
+
+        <div class="form-group">
+          <label for="s-og-desc">分享說明文字</label>
+          <textarea id="s-og-desc" placeholder="留空則使用網站描述" style="min-height:80px;"></textarea>
+        </div>
+
         <button type="submit" id="save-settings-btn" class="btn btn-primary btn-full">儲存設定</button>
       </form>
     </div>

@@ -456,6 +456,13 @@ async function loadSettings() {
   document.getElementById('s-price').value         = get('price_range');
   document.getElementById('s-hours').value         = get('opening_hours_text');
   document.getElementById('s-keywords').value      = get('seo_keywords');
+
+  document.getElementById('s-og-title').value = get('og_share_title');
+  document.getElementById('s-og-desc').value  = get('og_share_description');
+  const ogImg = get('og_share_image_url');
+  const ogPrev = document.getElementById('s-og-img-preview');
+  if (ogImg) { ogPrev.src = ogImg; ogPrev.style.display = 'block'; }
+  else ogPrev.style.display = 'none';
 }
 
 document.getElementById('settings-form').addEventListener('submit', async function (e) {
@@ -476,7 +483,9 @@ document.getElementById('settings-form').addEventListener('submit', async functi
     ['cuisine_type',         document.getElementById('s-cuisine').value],
     ['price_range',          document.getElementById('s-price').value],
     ['opening_hours_text',   document.getElementById('s-hours').value],
-    ['seo_keywords',         document.getElementById('s-keywords').value]
+    ['seo_keywords',         document.getElementById('s-keywords').value],
+    ['og_share_title',       document.getElementById('s-og-title').value],
+    ['og_share_description', document.getElementById('s-og-desc').value]
   ];
 
   const upserts = pairs.map(function (p) { return { key: p[0], value: p[1] }; });
@@ -487,6 +496,28 @@ document.getElementById('settings-form').addEventListener('submit', async functi
 
   if (error) { showToast('儲存失敗：' + error.message, 'error'); return; }
   showToast('設定已儲存！');
+});
+
+// ── OG Share Image ───────────────────────────────────────
+
+document.getElementById('s-og-image-upload').addEventListener('change', async function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const ext  = file.name.split('.').pop();
+  const path = 'og/share-' + Date.now() + '.' + ext;
+
+  const { error } = await sb.storage.from('photos').upload(path, file, { upsert: true });
+  if (error) { showToast('圖片上傳失敗', 'error'); e.target.value = ''; return; }
+
+  const { data: pub } = sb.storage.from('photos').getPublicUrl(path);
+  await sb.from('settings').upsert({ key: 'og_share_image_url', value: pub.publicUrl }, { onConflict: 'key' });
+
+  const prev = document.getElementById('s-og-img-preview');
+  prev.src = pub.publicUrl;
+  prev.style.display = 'block';
+  e.target.value = '';
+  showToast('分享主圖已上傳！');
 });
 
 // ── Promo ────────────────────────────────────────────────

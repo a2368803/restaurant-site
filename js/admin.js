@@ -504,14 +504,41 @@ document.getElementById('s-og-image-upload').addEventListener('change', async fu
   const file = e.target.files[0];
   if (!file) return;
 
-  const ext  = file.name.split('.').pop();
-  const path = 'og/share-' + Date.now() + '.' + ext;
+  showToast('處理中…');
 
-  const { error } = await sb.storage.from('photos').upload(path, file, { upsert: true });
+  // 強制轉 JPEG，確保 LINE / FB 可正確顯示
+  const { blob, width, height } = await new Promise(function (resolve) {
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      var img = new Image();
+      img.onload = function () {
+        var MAX = 2000;
+        var ratio = Math.min(1, MAX / Math.max(img.width, img.height));
+        var canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.width  * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(function (b) {
+          resolve({ blob: b, width: canvas.width, height: canvas.height });
+        }, 'image/jpeg', 0.90);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  const uploadPath = 'og/share-' + Date.now() + '.jpg';
+  const { error } = await sb.storage.from('photos').upload(
+    uploadPath, new File([blob], 'share.jpg', { type: 'image/jpeg' }), { upsert: true }
+  );
   if (error) { showToast('圖片上傳失敗', 'error'); e.target.value = ''; return; }
 
-  const { data: pub } = sb.storage.from('photos').getPublicUrl(path);
-  await sb.from('settings').upsert({ key: 'og_share_image_url', value: pub.publicUrl }, { onConflict: 'key' });
+  const { data: pub } = sb.storage.from('photos').getPublicUrl(uploadPath);
+  await sb.from('settings').upsert([
+    { key: 'og_share_image_url',    value: pub.publicUrl },
+    { key: 'og_share_image_width',  value: String(width) },
+    { key: 'og_share_image_height', value: String(height) }
+  ], { onConflict: 'key' });
 
   const prev = document.getElementById('s-og-img-preview');
   prev.src = pub.publicUrl;

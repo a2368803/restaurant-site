@@ -249,6 +249,7 @@ body {
 
 /* ── Responsive ──────────────────────── */
 @media (min-width: 600px) {
+  .media-section { padding: 0 3cm; }
   .carousel-track { max-height: 560px; }
   .map-wrapper { aspect-ratio: 16/9; }
   .sticky-ctas {
@@ -267,4 +268,8 @@ body {
     padding-left: 40px;
     padding-right: 40px;
   }
+}
+
+@media (min-width: 1024px) {
+  .media-section { padding: 0 4cm; }
 }

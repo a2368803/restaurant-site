@@ -203,6 +203,12 @@ function renderPhotos() {
       '    <div class="photo-actions" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">',
       (i > 0 ? '<button class="btn-sm" onclick="movePhoto(\'' + item.id + '\',\'up\')">↑ 上移</button>' : ''),
       (i < allPhotos.length - 1 ? '<button class="btn-sm" onclick="movePhoto(\'' + item.id + '\',\'down\')">↓ 下移</button>' : ''),
+      '<div style="display:flex;align-items:center;gap:3px;">',
+      '<span style="font-size:0.78rem;color:#8b7355;white-space:nowrap;">移到第</span>',
+      '<input type="number" id="pos-' + item.id + '" min="1" max="' + allPhotos.length + '" value="' + (i + 1) + '" style="width:42px;padding:3px 4px;border:1px solid #e8d5c4;border-radius:6px;font-size:0.82rem;text-align:center;">',
+      '<span style="font-size:0.78rem;color:#8b7355;">張</span>',
+      '<button class="btn-sm" onclick="movePhotoTo(\'' + item.id + '\')">移</button>',
+      '</div>',
       linkBtnHtml,
       '<button class="btn-sm danger" onclick="deletePhoto(\'' + item.id + '\',\'' + (item.storage_path || '') + '\',\'' + item.media_type + '\')">刪除</button>',
       '    </div>',
@@ -376,6 +382,27 @@ async function movePhoto(id, dir) {
     sb.from('photos').update({ sort_order: orderB }).eq('id', a.id),
     sb.from('photos').update({ sort_order: orderA }).eq('id', b.id)
   ]);
+}
+
+async function movePhotoTo(id) {
+  const input = document.getElementById('pos-' + id);
+  if (!input) return;
+  const newPos = parseInt(input.value, 10);
+  const idx = allPhotos.findIndex(function (p) { return p.id === id; });
+  if (idx === -1) return;
+  if (isNaN(newPos) || newPos < 1 || newPos > allPhotos.length || newPos === idx + 1) return;
+
+  const targetIdx = newPos - 1;
+  const item = allPhotos.splice(idx, 1)[0];
+  allPhotos.splice(targetIdx, 0, item);
+  renderPhotos();
+
+  // Reassign sort_orders for all items to keep order stable
+  const base = Date.now();
+  await Promise.all(allPhotos.map(function (p, i) {
+    p.sort_order = base + i;
+    return sb.from('photos').update({ sort_order: base + i }).eq('id', p.id);
+  }));
 }
 
 // ── Settings ─────────────────────────────────────────────

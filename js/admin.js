@@ -92,10 +92,17 @@ async function loadAnalytics() {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const { data: events, error } = await sb
-    .from('analytics_events')
-    .select('event_type, session_id')
-    .eq('event_date', today);
+  // Check reset timestamp (stored in settings, valid only for today)
+  let resetAt = null;
+  const { data: resetRow } = await sb.from('settings').select('value').eq('key', 'analytics_reset_at').maybeSingle();
+  if (resetRow && resetRow.value && resetRow.value.slice(0, 10) === today) {
+    resetAt = resetRow.value;
+  }
+
+  let evQuery = sb.from('analytics_events').select('event_type, session_id').eq('event_date', today);
+  if (resetAt) evQuery = evQuery.gte('created_at', resetAt);
+
+  const { data: events, error } = await evQuery;
 
   if (error || !events) {
     container.innerHTML = '<p style="color:#e05252;text-align:center;padding:20px;">載入失敗，請重試</p>';
@@ -169,13 +176,10 @@ async function loadAnalytics() {
 
 async function resetAnalytics() {
   if (!confirm('確定要清除今日所有數據並重新計算嗎？此操作無法復原。')) return;
-  const today = new Date().toISOString().slice(0, 10);
-  const { error } = await sb
-    .from('analytics_events')
-    .delete()
-    .eq('event_date', today);
+  const resetTime = new Date().toISOString();
+  const { error } = await sb.from('settings').upsert({ key: 'analytics_reset_at', value: resetTime });
   if (error) { showToast('重置失敗：' + error.message, 'error'); return; }
-  showToast('今日數據已清除');
+  showToast('今日數據已清除，重新計算中…');
   loadAnalytics();
 }
 

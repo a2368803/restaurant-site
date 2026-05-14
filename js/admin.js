@@ -147,8 +147,8 @@ async function loadAnalytics() {
     { label: '1/3 跳出率',  value: bounce33,          hint: '看到 1/3 後離開' },
     { label: '2/3 跳出率',  value: bounce67,          hint: '看到 2/3 後離開' },
     { label: '看完率',      value: pct(s100),         hint: '滑到底部的比例' },
-    { label: '訂位點擊率',  value: pct(resClick),     hint: '點擊訂位按鈕比例' },
-    { label: '撥打電話率',  value: pct(callClick),    hint: '點擊電話按鈕比例' }
+    { label: '訂位轉換人數', value: resClick  + ' 人',  hint: '點擊訂位按鈕的人數' },
+    { label: '電話轉換人數', value: callClick + ' 人',  hint: '點擊電話按鈕的人數' }
   ];
 
   const sources = [

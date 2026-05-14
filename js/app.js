@@ -75,23 +75,30 @@ async function trackEvent(type) {
 }
 
 function initScrollTracking() {
-  const heroEl = document.getElementById('media-section');
-  let heroPassed = false, s33 = false, s67 = false, s100 = false;
+  var heroPassed = false, s33 = false, s67 = false, s100 = false;
 
-  window.addEventListener('scroll', function () {
-    const scrollY = window.scrollY;
-    const totalH = document.documentElement.scrollHeight - window.innerHeight;
+  function onScroll() {
+    // pageYOffset is more compatible with in-app browsers than scrollY
+    var scrollY = window.pageYOffset !== undefined ? window.pageYOffset
+                : (document.documentElement.scrollTop || document.body.scrollTop || 0);
+    var totalH = document.documentElement.scrollHeight - window.innerHeight;
 
-    if (!heroPassed && heroEl && scrollY > heroEl.offsetHeight) {
+    // hero_passed: user scrolled past 60% of viewport = engaged, saw first photo
+    if (!heroPassed && scrollY > window.innerHeight * 0.6) {
       heroPassed = true;
       trackEvent('hero_passed');
     }
     if (totalH <= 0) return;
-    const pct = scrollY / totalH;
+    var pct = scrollY / totalH;
     if (!s33 && pct >= 0.33) { s33 = true; trackEvent('scroll_33'); }
     if (!s67 && pct >= 0.67) { s67 = true; trackEvent('scroll_67'); }
-    if (!s100 && pct >= 0.99) { s100 = true; trackEvent('scroll_100'); }
-  }, { passive: true });
+    // 0.95 instead of 0.99: iOS address bar shrinks on scroll, totalH shifts dynamically
+    if (!s100 && pct >= 0.95) { s100 = true; trackEvent('scroll_100'); }
+  }
+
+  // Listen on both: IG/FB in-app WebViews sometimes only fire document scroll
+  window.addEventListener('scroll', onScroll, { passive: true });
+  document.addEventListener('scroll', onScroll, { passive: true });
 }
 
 // ── Facebook Pixel ───────────────────────────────────────

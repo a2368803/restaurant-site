@@ -9,6 +9,27 @@ function initSupabase() {
   return true;
 }
 
+// ── Traffic Source Detection ─────────────────────────────
+
+function detectSource() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var utm = (params.get('utm_source') || '').toLowerCase();
+    if (utm) {
+      if (utm === 'fb' || utm.includes('facebook') || utm.includes('messenger')) return 'facebook';
+      if (utm === 'ig' || utm.includes('instagram')) return 'instagram';
+      if (utm.includes('threads')) return 'threads';
+      if (utm.includes('google')) return 'google';
+    }
+    var ref = (document.referrer || '').toLowerCase();
+    if (ref.includes('facebook') || ref.includes('fb.com') || ref.includes('l.facebook')) return 'facebook';
+    if (ref.includes('instagram') || ref.includes('l.instagram')) return 'instagram';
+    if (ref.includes('threads.net') || ref.includes('l.threads')) return 'threads';
+    if (ref.includes('google.')) return 'google';
+  } catch (_) {}
+  return null;
+}
+
 // ── Session & Analytics ──────────────────────────────────
 
 function getSessionId() {
@@ -394,6 +415,8 @@ async function init() {
   if (!ready) return;
 
   trackEvent('page_view');
+  var _src = detectSource();
+  if (_src) trackEvent('source_' + _src);
   initScrollTracking();
 
   // Skeleton placeholder keeps page layout stable while photos load

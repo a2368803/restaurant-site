@@ -125,6 +125,11 @@ async function loadAnalytics() {
   const bounce33 = total > 0 ? Math.round(Math.max(0, s33 - s67) / total * 100) + '%' : '—';
   const bounce67 = total > 0 ? Math.round(Math.max(0, s67 - s100) / total * 100) + '%' : '—';
 
+  const fbCount      = count('source_facebook');
+  const igCount      = count('source_instagram');
+  const threadsCount = count('source_threads');
+  const googleCount  = count('source_google');
+
   const stats = [
     { label: '今日進站',    value: visitors + ' 人', hint: '不重複訪客 session' },
     { label: '首圖留存率',  value: pct(heroPassed),  hint: '滑過首圖的比例' },
@@ -134,10 +139,23 @@ async function loadAnalytics() {
     { label: '訂位點擊率',  value: pct(resClick),     hint: '點擊訂位按鈕比例' }
   ];
 
+  const sources = [
+    { label: 'Facebook',  value: fbCount      + ' 人' },
+    { label: 'Instagram', value: igCount      + ' 人' },
+    { label: 'Threads',   value: threadsCount + ' 人' },
+    { label: 'Google',    value: googleCount  + ' 人' }
+  ];
+
   container.innerHTML =
     '<div class="tab-title">今日數據 <span class="badge">' + today + '</span></div>' +
     '<div class="stat-grid">' +
     stats.map(function (s) {
+      return '<div class="stat-card"><span class="stat-value">' + s.value + '</span><span class="stat-label">' + s.label + '</span></div>';
+    }).join('') +
+    '</div>' +
+    '<div class="tab-title" style="margin-top:24px;font-size:0.9rem;">流量來源</div>' +
+    '<div class="stat-grid">' +
+    sources.map(function (s) {
       return '<div class="stat-card"><span class="stat-value">' + s.value + '</span><span class="stat-label">' + s.label + '</span></div>';
     }).join('') +
     '</div>' +

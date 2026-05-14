@@ -436,9 +436,11 @@ function initPromo(settings) {
 async function init() {
   const ready = initSupabase();
 
-  // Reservation click tracking (attach early)
-  const resBtn = document.getElementById('cta-reservation');
-  if (resBtn) resBtn.addEventListener('click', function () { trackEvent('reservation_click'); });
+  // CTA click tracking (attach early)
+  const resBtn  = document.getElementById('cta-reservation');
+  const callBtn = document.getElementById('cta-call');
+  if (resBtn)  resBtn.addEventListener('click',  function () { trackEvent('reservation_click'); });
+  if (callBtn) callBtn.addEventListener('click', function () { trackEvent('call_click'); });
 
   // Promo close
   const promoClose = document.getElementById('promo-close');

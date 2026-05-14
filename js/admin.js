@@ -117,11 +117,11 @@ async function loadAnalytics() {
   });
 
   const sessionArr = Object.values(sessions);
-  const total = sessionArr.length;
 
   function count(type) { return sessionArr.filter(function (s) { return s[type]; }).length; }
-  function pct(n) { return total > 0 ? Math.round(n / total * 100) + '%' : '—'; }
 
+  // All percentages use visitors (page_view sessions) as denominator,
+  // matching the "今日進站" count and excluding partial/orphan tracking sessions.
   const visitors   = count('page_view');
   const heroPassed = count('hero_passed');
   const s33        = count('scroll_33');
@@ -129,8 +129,10 @@ async function loadAnalytics() {
   const s100       = count('scroll_100');
   const resClick   = count('reservation_click');
 
-  const bounce33 = total > 0 ? Math.round(Math.max(0, s33 - s67) / total * 100) + '%' : '—';
-  const bounce67 = total > 0 ? Math.round(Math.max(0, s67 - s100) / total * 100) + '%' : '—';
+  function pct(n) { return visitors > 0 ? Math.round(n / visitors * 100) + '%' : '—'; }
+
+  const bounce33 = visitors > 0 ? Math.round(Math.max(0, s33 - s67)  / visitors * 100) + '%' : '—';
+  const bounce67 = visitors > 0 ? Math.round(Math.max(0, s67 - s100) / visitors * 100) + '%' : '—';
 
   const fbCount      = count('source_facebook');
   const igCount      = count('source_instagram');

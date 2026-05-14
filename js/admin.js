@@ -129,6 +129,7 @@ async function loadAnalytics() {
   const igCount      = count('source_instagram');
   const threadsCount = count('source_threads');
   const googleCount  = count('source_google');
+  const lineCount    = count('source_line');
 
   const stats = [
     { label: '今日進站',    value: visitors + ' 人', hint: '不重複訪客 session' },
@@ -143,7 +144,8 @@ async function loadAnalytics() {
     { label: 'Facebook',  value: fbCount      + ' 人' },
     { label: 'Instagram', value: igCount      + ' 人' },
     { label: 'Threads',   value: threadsCount + ' 人' },
-    { label: 'Google',    value: googleCount  + ' 人' }
+    { label: 'Google',    value: googleCount  + ' 人' },
+    { label: 'LINE',      value: lineCount    + ' 人' }
   ];
 
   container.innerHTML =

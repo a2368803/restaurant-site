@@ -13,6 +13,7 @@ function initSupabase() {
 
 function detectSource() {
   try {
+    // 1. UTM 參數最可靠，優先判斷
     var params = new URLSearchParams(window.location.search);
     var utm = (params.get('utm_source') || '').toLowerCase();
     if (utm) {
@@ -20,12 +21,29 @@ function detectSource() {
       if (utm === 'ig' || utm.includes('instagram')) return 'instagram';
       if (utm.includes('threads')) return 'threads';
       if (utm.includes('google')) return 'google';
+      if (utm.includes('line')) return 'line';
     }
+
+    // 2. User-Agent 偵測（App 內建瀏覽器常不帶 Referrer，靠 UA 補救）
+    var ua = navigator.userAgent || '';
+    if (/FBAN|FBAV|FB_IAB|\[FBAN/.test(ua)) return 'facebook';
+    if (/Instagram/.test(ua))               return 'instagram';
+    if (/\bLine\//.test(ua))                return 'line';
+
+    // 3. Referrer 偵測
     var ref = (document.referrer || '').toLowerCase();
-    if (ref.includes('facebook') || ref.includes('fb.com') || ref.includes('l.facebook')) return 'facebook';
-    if (ref.includes('instagram') || ref.includes('l.instagram')) return 'instagram';
-    if (ref.includes('threads.net') || ref.includes('l.threads')) return 'threads';
-    if (ref.includes('google.')) return 'google';
+    if (ref.includes('facebook.com') || ref.includes('fb.com') || ref.includes('l.facebook')) return 'facebook';
+    if (ref.includes('instagram.com') || ref.includes('l.instagram'))                          return 'instagram';
+    if (ref.includes('threads.net')   || ref.includes('l.threads'))                            return 'threads';
+    if (ref.includes('line.me')       || ref.includes('liff.line'))                            return 'line';
+
+    // Google 只算根網域搜尋（排除 mail / maps / accounts / docs 等子網域）
+    if (ref) {
+      try {
+        var host = new URL(document.referrer).hostname;
+        if (/^(www\.)?google\.[a-z.]+$/.test(host)) return 'google';
+      } catch (_) {}
+    }
   } catch (_) {}
   return null;
 }

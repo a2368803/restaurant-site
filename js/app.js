@@ -61,16 +61,28 @@ function getSessionId() {
   return id;
 }
 
-async function trackEvent(type) {
+function trackEvent(type) {
   if (!sb) return;
   if (sessionStorage.getItem('_e_' + type)) return;
   sessionStorage.setItem('_e_' + type, '1');
   try {
-    await sb.from('analytics_events').insert({
-      event_type: type,
-      session_id: getSessionId(),
-      event_date: new Date().toISOString().slice(0, 10)
-    });
+    // keepalive: true ensures the request survives page close/unload,
+    // which is critical for scroll milestone events (scroll_33, scroll_67, etc.)
+    fetch(SUPABASE_URL + '/rest/v1/analytics_events', {
+      method: 'POST',
+      keepalive: true,
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        event_type: type,
+        session_id: getSessionId(),
+        event_date: new Date().toISOString().slice(0, 10)
+      })
+    }).catch(function () {});
   } catch (_) {}
 }
 

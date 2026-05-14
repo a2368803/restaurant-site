@@ -161,7 +161,22 @@ async function loadAnalytics() {
       return '<div class="stat-card"><span class="stat-value">' + s.value + '</span><span class="stat-label">' + s.label + '</span></div>';
     }).join('') +
     '</div>' +
-    '<p class="analytics-note">數據反映今日截至目前的訪客行為，每次開啟自動更新</p>';
+    '<p class="analytics-note">數據反映今日截至目前的訪客行為，每次開啟自動更新</p>' +
+    '<div style="text-align:center;margin-top:20px;">' +
+    '<button onclick="resetAnalytics()" class="btn-reset-analytics">數據重置</button>' +
+    '</div>';
+}
+
+async function resetAnalytics() {
+  if (!confirm('確定要清除今日所有數據並重新計算嗎？此操作無法復原。')) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const { error } = await sb
+    .from('analytics_events')
+    .delete()
+    .eq('event_date', today);
+  if (error) { showToast('重置失敗：' + error.message, 'error'); return; }
+  showToast('今日數據已清除');
+  loadAnalytics();
 }
 
 // ── Photos ───────────────────────────────────────────────

@@ -200,6 +200,38 @@ body {
   border: 1px solid var(--border);
 }
 
+.visitor-toggle {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+.vtog {
+  flex: 1;
+  padding: 10px 8px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+  line-height: 1.2;
+}
+.vtog.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+.vtog-count {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
 .btn-reset-analytics {
   padding: 8px 20px;
   font-size: 0.85rem;

@@ -86,102 +86,112 @@ function loadTab(tab) {
 
 // ── Analytics ────────────────────────────────────────────
 
+var _analyticsCache = null;
+
 async function loadAnalytics() {
-  const container = document.getElementById('analytics-content');
+  var container = document.getElementById('analytics-content');
   container.innerHTML = '<div class="loading">載入數據中</div>';
+  var today = new Date().toISOString().slice(0, 10);
 
-  const today = new Date().toISOString().slice(0, 10);
+  var resetAt = null;
+  var resetResult = await sb.from('settings').select('value').eq('key', 'analytics_reset_at').maybeSingle();
+  var resetRow = resetResult.data;
+  if (resetRow && resetRow.value && resetRow.value.slice(0, 10) === today) resetAt = resetRow.value;
 
-  // Check reset timestamp (stored in settings, valid only for today)
-  let resetAt = null;
-  const { data: resetRow } = await sb.from('settings').select('value').eq('key', 'analytics_reset_at').maybeSingle();
-  if (resetRow && resetRow.value && resetRow.value.slice(0, 10) === today) {
-    resetAt = resetRow.value;
-  }
-
-  let evQuery = sb.from('analytics_events').select('event_type, session_id').eq('event_date', today);
+  var evQuery = sb.from('analytics_events').select('event_type, session_id').eq('event_date', today);
   if (resetAt) evQuery = evQuery.gte('created_at', resetAt);
+  var evResult = await evQuery;
 
-  const { data: events, error } = await evQuery;
-
-  if (error || !events) {
+  if (evResult.error || !evResult.data) {
     container.innerHTML = '<p style="color:#e05252;text-align:center;padding:20px;">載入失敗，請重試</p>';
     return;
   }
 
-  // Aggregate per session
-  const sessions = {};
-  events.forEach(function (ev) {
+  var sessions = {};
+  evResult.data.forEach(function(ev) {
     if (!sessions[ev.session_id]) sessions[ev.session_id] = {};
     sessions[ev.session_id][ev.event_type] = true;
   });
+  var sessionArr = Object.values(sessions);
 
-  const sessionArr = Object.values(sessions);
+  function computeGroup(arr) {
+    var v = arr.filter(function(s) { return s['page_view']; }).length;
+    function cnt(t) { return arr.filter(function(s) { return s[t]; }).length; }
+    function pct(n) { return v > 0 ? Math.round(n / v * 100) + '%' : '—'; }
+    var s33 = cnt('scroll_33'), s67 = cnt('scroll_67'), s100 = cnt('scroll_100');
+    var res = cnt('reservation_click'), call = cnt('call_click');
+    var cta = arr.filter(function(s) { return s['reservation_click'] || s['call_click']; }).length;
+    return {
+      visitors: v,
+      rows: [
+        { label: '進站人數',   value: v + ' 人' },
+        { label: '首圖留存率', value: pct(cnt('hero_passed')) },
+        { label: '1/3 跳出率', value: v > 0 ? Math.round(Math.max(0, s33 - s67)  / v * 100) + '%' : '—' },
+        { label: '2/3 跳出率', value: v > 0 ? Math.round(Math.max(0, s67 - s100) / v * 100) + '%' : '—' },
+        { label: '看完率',     value: pct(s100) },
+        { label: 'CTA 點擊率', value: pct(cta) },
+        { label: '訂位轉換率', value: pct(res) },
+        { label: '電話轉換率', value: pct(call) }
+      ]
+    };
+  }
 
-  function count(type) { return sessionArr.filter(function (s) { return s[type]; }).length; }
-
-  // All percentages use visitors (page_view sessions) as denominator,
-  // matching the "今日進站" count and excluding partial/orphan tracking sessions.
-  const visitors   = count('page_view');
-  const heroPassed = count('hero_passed');
-  const s33        = count('scroll_33');
-  const s67        = count('scroll_67');
-  const s100       = count('scroll_100');
-  const resClick   = count('reservation_click');
-  const callClick  = count('call_click');
-
-  function pct(n) { return visitors > 0 ? Math.round(n / visitors * 100) + '%' : '—'; }
-
-  const bounce33 = visitors > 0 ? Math.round(Math.max(0, s33 - s67)  / visitors * 100) + '%' : '—';
-  const bounce67 = visitors > 0 ? Math.round(Math.max(0, s67 - s100) / visitors * 100) + '%' : '—';
-
-  const fbCount      = count('source_facebook');
-  const igCount      = count('source_instagram');
-  const threadsCount = count('source_threads');
-  const googleCount  = count('source_google');
-  const lineCount    = count('source_line');
-
-  const stats = [
-    { label: '今日進站',    value: visitors + ' 人', hint: '不重複訪客 session' },
-    { label: '首圖留存率',  value: pct(heroPassed),  hint: '滑過首圖的比例' },
-    { label: '1/3 跳出率',  value: bounce33,          hint: '看到 1/3 後離開' },
-    { label: '2/3 跳出率',  value: bounce67,          hint: '看到 2/3 後離開' },
-    { label: '看完率',      value: pct(s100),         hint: '滑到底部的比例' },
-    { label: '訂位轉換人數', value: resClick  + ' 人',  hint: '點擊訂位按鈕的人數' },
-    { label: '電話轉換人數', value: callClick + ' 人',  hint: '點擊電話按鈕的人數' }
+  function cntAll(t) { return sessionArr.filter(function(s) { return s[t]; }).length; }
+  var sources = [
+    { label: 'Facebook',  value: cntAll('source_facebook')  + ' 人' },
+    { label: 'Instagram', value: cntAll('source_instagram') + ' 人' },
+    { label: 'Threads',   value: cntAll('source_threads')   + ' 人' },
+    { label: 'Google',    value: cntAll('source_google')    + ' 人' },
+    { label: 'LINE',      value: cntAll('source_line')      + ' 人' }
   ];
 
-  const sources = [
-    { label: 'Facebook',  value: fbCount      + ' 人' },
-    { label: 'Instagram', value: igCount      + ' 人' },
-    { label: 'Threads',   value: threadsCount + ' 人' },
-    { label: 'Google',    value: googleCount  + ' 人' },
-    { label: 'LINE',      value: lineCount    + ' 人' }
-  ];
+  _analyticsCache = {
+    today: today,
+    newGroup:    computeGroup(sessionArr.filter(function(s) { return s['new_visitor']; })),
+    returnGroup: computeGroup(sessionArr.filter(function(s) { return s['returning_visitor']; })),
+    sources: sources
+  };
 
   container.innerHTML =
     '<div class="tab-title">今日數據 <span class="badge">' + today + '</span></div>' +
-    '<div class="stat-grid">' +
-    stats.map(function (s) {
-      return '<div class="stat-card"><span class="stat-value">' + s.value + '</span><span class="stat-label">' + s.label + '</span></div>';
-    }).join('') +
+    '<div class="visitor-toggle">' +
+    '<button id="vtog-new" class="vtog active" onclick="switchVisitorMode(\'new\')">第一次進站<span class="vtog-count">' + _analyticsCache.newGroup.visitors + ' 人</span></button>' +
+    '<button id="vtog-ret" class="vtog" onclick="switchVisitorMode(\'return\')">重複進站<span class="vtog-count">' + _analyticsCache.returnGroup.visitors + ' 人</span></button>' +
     '</div>' +
+    '<div id="analytics-mode-grid" class="stat-grid"></div>' +
     '<div class="tab-title" style="margin-top:24px;font-size:0.9rem;">流量來源</div>' +
     '<div class="stat-grid">' +
-    sources.map(function (s) {
+    sources.map(function(s) {
       return '<div class="stat-card"><span class="stat-value">' + s.value + '</span><span class="stat-label">' + s.label + '</span></div>';
     }).join('') +
     '</div>' +
     '<p class="analytics-note">數據反映今日截至目前的訪客行為，每次開啟自動更新</p>' +
-    '<div style="text-align:center;margin-top:20px;">' +
-    '<button onclick="resetAnalytics()" class="btn-reset-analytics">數據重置</button>' +
-    '</div>';
+    '<div style="text-align:center;margin-top:20px;"><button onclick="resetAnalytics()" class="btn-reset-analytics">數據重置</button></div>';
+
+  renderAnalyticsMode('new');
 }
+
+function renderAnalyticsMode(mode) {
+  if (!_analyticsCache) return;
+  var group = mode === 'new' ? _analyticsCache.newGroup : _analyticsCache.returnGroup;
+  var grid = document.getElementById('analytics-mode-grid');
+  if (grid) {
+    grid.innerHTML = group.rows.map(function(r) {
+      return '<div class="stat-card"><span class="stat-value">' + r.value + '</span><span class="stat-label">' + r.label + '</span></div>';
+    }).join('');
+  }
+  var btnNew = document.getElementById('vtog-new');
+  var btnRet = document.getElementById('vtog-ret');
+  if (btnNew) btnNew.classList.toggle('active', mode === 'new');
+  if (btnRet) btnRet.classList.toggle('active', mode === 'return');
+}
+
+function switchVisitorMode(mode) { renderAnalyticsMode(mode); }
 
 async function resetAnalytics() {
   if (!confirm('確定要清除今日所有數據並重新計算嗎？此操作無法復原。')) return;
-  const resetTime = new Date().toISOString();
-  const { error } = await sb.from('settings').upsert({ key: 'analytics_reset_at', value: resetTime });
+  var resetTime = new Date().toISOString();
+  var { error } = await sb.from('settings').upsert({ key: 'analytics_reset_at', value: resetTime });
   if (error) { showToast('重置失敗：' + error.message, 'error'); return; }
   showToast('今日數據已清除，重新計算中…');
   loadAnalytics();

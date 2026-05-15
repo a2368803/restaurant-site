@@ -454,6 +454,9 @@ async function init() {
   if (!ready) return;
 
   trackEvent('page_view');
+  var _isNew = !localStorage.getItem('_visited');
+  localStorage.setItem('_visited', '1');
+  trackEvent(_isNew ? 'new_visitor' : 'returning_visitor');
   var _src = detectSource();
   if (_src) trackEvent('source_' + _src);
   initScrollTracking();

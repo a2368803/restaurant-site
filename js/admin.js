@@ -263,6 +263,7 @@ function renderPhotos() {
       '<button class="btn-sm" onclick="movePhotoTo(\'' + item.id + '\')">移</button>',
       '</div>',
       linkBtnHtml,
+      (!isYT ? '<button class="btn-sm" onclick="replacePhoto(\'' + item.id + '\',\'' + (item.storage_path || '') + '\')">換照片</button>' : ''),
       '<button class="btn-sm danger" onclick="deletePhoto(\'' + item.id + '\',\'' + (item.storage_path || '') + '\',\'' + item.media_type + '\')">刪除</button>',
       '    </div>',
       '  </div>',
@@ -357,6 +358,61 @@ async function savePhotoLink(id) {
   const { error } = await sb.from('photos').update({ link_url: input.value }).eq('id', id);
   if (error) { showToast('儲存失敗', 'error'); return; }
   showToast('連結已儲存');
+}
+
+function replacePhoto(id, oldStoragePath) {
+  var fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*';
+  fileInput.onchange = async function () {
+    var file = fileInput.files[0];
+    if (!file) return;
+
+    showToast('處理中…');
+    var processed = await processImage(file);
+    var saving = processed.originalSize > 0
+      ? Math.round((1 - processed.compressedSize / processed.originalSize) * 100) : 0;
+    var sizeKB = Math.round(processed.compressedSize / 1024);
+
+    var base        = Date.now() + '-' + Math.random().toString(36).slice(2);
+    var pathDesktop = base + '.webp';
+    var pathMobile  = base + '_m.webp';
+
+    var { error: e1 } = await sb.storage.from('photos').upload(pathDesktop, processed.desktop);
+    if (e1) { showToast('上傳失敗：' + e1.message, 'error'); return; }
+    await sb.storage.from('photos').upload(pathMobile, processed.mobile);
+
+    var { data: pub1 } = sb.storage.from('photos').getPublicUrl(pathDesktop);
+    var { data: pub2 } = sb.storage.from('photos').getPublicUrl(pathMobile);
+
+    var { error: e2 } = await sb.from('photos').update({
+      storage_path: pathDesktop,
+      url:          pub1.publicUrl,
+      url_mobile:   pub2 ? pub2.publicUrl : ''
+    }).eq('id', id);
+    if (e2) { showToast('更新失敗：' + e2.message, 'error'); return; }
+
+    // Delete old files after DB update succeeds
+    if (oldStoragePath) {
+      await sb.storage.from('photos').remove([
+        oldStoragePath,
+        oldStoragePath.replace('.webp', '_m.webp')
+      ]);
+    }
+
+    showToast('換圖完成，節省 ' + saving + '%（' + sizeKB + ' KB）');
+
+    var idx = allPhotos.findIndex(function (p) { return p.id === id; });
+    if (idx !== -1) {
+      allPhotos[idx] = Object.assign({}, allPhotos[idx], {
+        storage_path: pathDesktop,
+        url:          pub1.publicUrl,
+        url_mobile:   pub2 ? pub2.publicUrl : ''
+      });
+      renderPhotos();
+    }
+  };
+  fileInput.click();
 }
 
 // ── YouTube Modal ─────────────────────────────────────────

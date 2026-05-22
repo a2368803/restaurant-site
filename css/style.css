@@ -124,12 +124,7 @@ body {
 .media-placeholder {
   width: 100%;
   min-height: 70vh;
-  background: linear-gradient(180deg, #ede4da 0%, #e4d8cc 100%);
-  animation: skeletonPulse 1.4s ease-in-out infinite;
-}
-@keyframes skeletonPulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.55; }
+  background: #f2ead9;
 }
 
 /* ── Footer ──────────────────────────── */

@@ -8,13 +8,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
 
   <!-- ── 設定未完成提示 ────────────────────────── -->
   <div id="setup-banner" class="setup-banner">
-    ⚠️ 請先開啟 <code>config.js</code>，填入 Supabase 的 <code>SUPABASE_URL</code> 與 <code>SUPABASE_ANON_KEY</code>，再重新整理此頁。
+    ⚠️ Supabase 環境變數尚未設定，請在 Vercel 後台填入 <code>SUPABASE_URL</code> 與 <code>SUPABASE_ANON_KEY</code>，或於本地建立 <code>.env</code> 後重新部署。
   </div>
 
   <!-- ══════════════════════════════════════════ -->
@@ -49,8 +49,11 @@
 
     <!-- Header -->
     <header class="admin-header">
-      <h1>⚙️ 後台管理</h1>
-      <button id="logout-btn" class="btn-logout">登出</button>
+      <h1>⚙️ <span id="store-name-display">後台管理</span></h1>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <a id="view-site-link" href="#" target="_blank" rel="noopener" class="btn-logout" style="background:#8b5e3c;color:#fff;text-decoration:none;">查看網站 ↗</a>
+        <button id="logout-btn" class="btn-logout">登出</button>
+      </div>
     </header>
 
     <!-- Tab Nav -->
@@ -259,7 +262,7 @@
 
   <!-- ── Scripts ──────────────────────────────── -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="config.js"></script>
-  <script src="js/admin.js"></script>
+  <script src="/api/config.js"></script>
+  <script src="/js/admin.js"></script>
 </body>
 </html>

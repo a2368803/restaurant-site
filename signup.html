@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>註冊店家｜店家網站平台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/platform.css">
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <a href="/" class="auth-back">← 回首頁</a>
+      <h1 class="auth-title">免費註冊一家店</h1>
+      <p class="auth-sub">填寫資料，立刻擁有專屬一頁式網站與後台</p>
+
+      <div id="msg" class="auth-msg"></div>
+
+      <form id="signup-form" class="auth-form" autocomplete="on">
+        <div class="form-group">
+          <label for="name">店名</label>
+          <input type="text" id="name" required maxlength="50" placeholder="例：和田古早味日式料理">
+        </div>
+
+        <div class="form-group">
+          <label for="slug">網址代稱（slug）</label>
+          <div class="slug-preview">
+            <span class="slug-preview-prefix" id="slug-prefix">/</span>
+            <input type="text" id="slug" required pattern="[a-z0-9][a-z0-9-]{1,30}"
+                   minlength="2" maxlength="31" placeholder="wada">
+          </div>
+          <p class="auth-hint">只能用小寫英文、數字、連字號（2–31 字）。例：wada → 你的網址會是 yourdomain.com/wada</p>
+        </div>
+
+        <div class="form-group">
+          <label for="email">電子郵件</label>
+          <input type="email" id="email" required autocomplete="email" placeholder="you@example.com">
+        </div>
+
+        <div class="form-group">
+          <label for="password">密碼</label>
+          <input type="password" id="password" required minlength="6" autocomplete="new-password" placeholder="至少 6 個字元">
+        </div>
+
+        <button type="submit" id="submit-btn" class="auth-btn">建立我的店家網站 →</button>
+      </form>
+
+      <p class="auth-switch">已經有帳號？ <a href="/login">登入</a></p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/api/config.js"></script>
+  <script>
+    (function () {
+      var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      var msg = document.getElementById('msg');
+      var btn = document.getElementById('submit-btn');
+
+      function showMsg(text, type) {
+        msg.textContent = text;
+        msg.className = 'auth-msg show ' + (type || 'error');
+      }
+
+      // slug 即時預覽 + 防呆
+      var slugInput = document.getElementById('slug');
+      var prefixEl = document.getElementById('slug-prefix');
+      slugInput.addEventListener('input', function () {
+        // 強制小寫 + 過濾掉非 a-z0-9-
+        var v = this.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+        if (v !== this.value) this.value = v;
+      });
+
+      // 已登入則直接跳後台（避免重複註冊）
+      sb.auth.getSession().then(function (r) {
+        if (r.data.session) location.href = '/admin';
+      });
+
+      document.getElementById('signup-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        btn.disabled = true;
+        btn.textContent = '建立中…';
+        msg.className = 'auth-msg';
+
+        var name     = document.getElementById('name').value.trim();
+        var slug     = document.getElementById('slug').value.trim().toLowerCase();
+        var email    = document.getElementById('email').value.trim();
+        var password = document.getElementById('password').value;
+
+        // slug 前端再次驗證
+        if (!/^[a-z0-9][a-z0-9-]{1,30}$/.test(slug)) {
+          showMsg('網址代稱格式不正確：只能用小寫英文、數字、連字號（2–31 字）', 'error');
+          btn.disabled = false; btn.textContent = '建立我的店家網站 →';
+          return;
+        }
+
+        // 1. 註冊 Supabase Auth user
+        var signRes = await sb.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            emailRedirectTo: location.origin + '/admin'
+          }
+        });
+
+        if (signRes.error) {
+          showMsg('註冊失敗：' + signRes.error.message, 'error');
+          btn.disabled = false; btn.textContent = '建立我的店家網站 →';
+          return;
+        }
+
+        // 2. 若 Supabase 設定要求 email 驗證 → 提示用戶
+        if (!signRes.data.session) {
+          showMsg('已寄出驗證信，請至 ' + email + ' 收信驗證後再登入', 'success');
+          btn.disabled = false; btn.textContent = '建立我的店家網站 →';
+          return;
+        }
+
+        // 3. 已登入 → 呼叫 RPC 建立 store + profile
+        var rpcRes = await sb.rpc('create_store_for_current_user', {
+          p_slug: slug,
+          p_name: name
+        });
+
+        if (rpcRes.error) {
+          var msg2 = rpcRes.error.message || '';
+          if (msg2.indexOf('duplicate') >= 0 || msg2.indexOf('unique') >= 0) {
+            showMsg('「' + slug + '」這個網址代稱已被使用，請換一個', 'error');
+          } else if (msg2.indexOf('reserved') >= 0) {
+            showMsg('「' + slug + '」是系統保留字，請換一個', 'error');
+          } else {
+            showMsg('建立店家失敗：' + msg2, 'error');
+          }
+          // 已建立 auth user，登出讓他能重試
+          await sb.auth.signOut();
+          btn.disabled = false; btn.textContent = '建立我的店家網站 →';
+          return;
+        }
+
+        showMsg('建立成功！跳轉到後台…', 'success');
+        setTimeout(function () { location.href = '/admin'; }, 800);
+      });
+    })();
+  </script>
+</body>
+</html>

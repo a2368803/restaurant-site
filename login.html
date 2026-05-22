@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>登入｜店家網站平台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/platform.css">
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <a href="/" class="auth-back">← 回首頁</a>
+      <h1 class="auth-title">登入後台</h1>
+      <p class="auth-sub">管理你的店家網站、照片與數據</p>
+
+      <div id="msg" class="auth-msg"></div>
+
+      <form id="login-form" class="auth-form" autocomplete="on">
+        <div class="form-group">
+          <label for="email">電子郵件</label>
+          <input type="email" id="email" required autocomplete="email" placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label for="password">密碼</label>
+          <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••">
+        </div>
+        <button type="submit" id="submit-btn" class="auth-btn">登入</button>
+      </form>
+
+      <p class="auth-switch">還沒有帳號？ <a href="/signup">免費註冊一家店</a></p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/api/config.js"></script>
+  <script>
+    (function () {
+      var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      var msg = document.getElementById('msg');
+      var btn = document.getElementById('submit-btn');
+
+      function showMsg(text, type) {
+        msg.textContent = text;
+        msg.className = 'auth-msg show ' + (type || 'error');
+      }
+
+      // 已登入則直接跳後台
+      sb.auth.getSession().then(function (r) {
+        if (r.data.session) location.href = '/admin';
+      });
+
+      document.getElementById('login-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        btn.disabled = true;
+        btn.textContent = '登入中…';
+        msg.className = 'auth-msg';
+
+        var email    = document.getElementById('email').value.trim();
+        var password = document.getElementById('password').value;
+
+        var res = await sb.auth.signInWithPassword({ email: email, password: password });
+
+        if (res.error) {
+          showMsg('登入失敗：' + (res.error.message || '帳號或密碼錯誤'), 'error');
+          btn.disabled = false;
+          btn.textContent = '登入';
+          return;
+        }
+
+        showMsg('登入成功，跳轉中…', 'success');
+        location.href = '/admin';
+      });
+    })();
+  </script>
+</body>
+</html>

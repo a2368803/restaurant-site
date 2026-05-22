@@ -1,6 +1,15 @@
 {
   "routes": [
-    { "src": "^/$", "dest": "/api/index" },
-    { "src": "/(.*)", "dest": "/$1" }
+    { "src": "^/api/(.*)$",   "dest": "/api/$1" },
+    { "src": "^/css/(.*)$",   "dest": "/css/$1" },
+    { "src": "^/js/(.*)$",    "dest": "/js/$1" },
+    { "src": "^/robots\\.txt$",  "dest": "/robots.txt" },
+    { "src": "^/sitemap\\.xml$", "dest": "/sitemap.xml" },
+    { "src": "^/favicon\\.ico$", "status": 204 },
+    { "src": "^/$",           "dest": "/platform.html" },
+    { "src": "^/signup/?$",   "dest": "/signup.html" },
+    { "src": "^/login/?$",    "dest": "/login.html" },
+    { "src": "^/admin/?$",    "dest": "/admin.html" },
+    { "src": "^/([a-z0-9][a-z0-9-]{1,30})/?$", "dest": "/api/index?slug=$1" }
   ]
 }

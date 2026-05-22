@@ -2,6 +2,7 @@
 
 const { createClient } = window.supabase;
 let sb = null;
+let myStore = null;   // { id, slug, name, ... }
 
 // ── YouTube helper ────────────────────────────────────────
 
@@ -23,7 +24,7 @@ function getYouTubeId(url) {
 // ── Init ─────────────────────────────────────────────────
 
 function initSupabase() {
-  if (typeof SUPABASE_URL === 'undefined' || SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     document.getElementById('setup-banner').style.display = 'block';
     return false;
   }
@@ -60,6 +61,35 @@ document.getElementById('logout-btn').addEventListener('click', function () {
   sb.auth.signOut();
 });
 
+// ── 載入目前使用者的 store ──────────────────────────────
+
+async function loadMyStore() {
+  // 1. profile 取得 store_id
+  var pRes = await sb.from('profiles').select('store_id, role').maybeSingle();
+  if (pRes.error || !pRes.data) {
+    showToast('找不到您的店家資料，請聯絡管理員', 'error');
+    return null;
+  }
+  var storeId = pRes.data.store_id;
+
+  // 2. store 詳細資料
+  var sRes = await sb.from('stores').select('*').eq('id', storeId).maybeSingle();
+  if (sRes.error || !sRes.data) {
+    showToast('讀取店家資料失敗', 'error');
+    return null;
+  }
+  myStore = sRes.data;
+
+  // 3. UI 更新
+  var nameEl = document.getElementById('store-name-display');
+  if (nameEl) nameEl.textContent = myStore.name + '（/' + myStore.slug + '）';
+
+  var viewLink = document.getElementById('view-site-link');
+  if (viewLink) viewLink.href = '/' + myStore.slug;
+
+  return myStore;
+}
+
 // ── Tab Nav ──────────────────────────────────────────────
 
 let activeTab = 'analytics';
@@ -78,6 +108,7 @@ document.querySelectorAll('.tab-btn').forEach(function (btn) {
 });
 
 function loadTab(tab) {
+  if (!myStore) return;
   if (tab === 'analytics') loadAnalytics();
   if (tab === 'photos')    loadPhotos();
   if (tab === 'settings')  loadSettings();
@@ -94,11 +125,11 @@ async function loadAnalytics() {
   var today = new Date().toISOString().slice(0, 10);
 
   var resetAt = null;
-  var resetResult = await sb.from('settings').select('value').eq('key', 'analytics_reset_at').maybeSingle();
+  var resetResult = await sb.from('settings').select('value').eq('store_id', myStore.id).eq('key', 'analytics_reset_at').maybeSingle();
   var resetRow = resetResult.data;
   if (resetRow && resetRow.value && resetRow.value.slice(0, 10) === today) resetAt = resetRow.value;
 
-  var evQuery = sb.from('analytics_events').select('event_type, session_id').eq('event_date', today);
+  var evQuery = sb.from('analytics_events').select('event_type, session_id').eq('store_id', myStore.id).eq('event_date', today);
   if (resetAt) evQuery = evQuery.gte('created_at', resetAt);
   var evResult = await evQuery;
 
@@ -149,14 +180,16 @@ async function loadAnalytics() {
     today: today,
     newGroup:    computeGroup(sessionArr.filter(function(s) { return s['new_visitor']; })),
     returnGroup: computeGroup(sessionArr.filter(function(s) { return s['returning_visitor']; })),
+    allGroup:    computeGroup(sessionArr),
     sources: sources
   };
 
   container.innerHTML =
     '<div class="tab-title">今日數據 <span class="badge">' + today + '</span></div>' +
     '<div class="visitor-toggle">' +
-    '<button id="vtog-new" class="vtog active" onclick="switchVisitorMode(\'new\')">第一次進站<span class="vtog-count">' + _analyticsCache.newGroup.visitors + ' 人</span></button>' +
-    '<button id="vtog-ret" class="vtog" onclick="switchVisitorMode(\'return\')">重複進站<span class="vtog-count">' + _analyticsCache.returnGroup.visitors + ' 人</span></button>' +
+    '<button id="vtog-all" class="vtog active" onclick="switchVisitorMode(\'all\')">全部訪客<span class="vtog-count">' + _analyticsCache.allGroup.visitors + ' 人</span></button>' +
+    '<button id="vtog-new" class="vtog" onclick="switchVisitorMode(\'new\')">第一次<span class="vtog-count">' + _analyticsCache.newGroup.visitors + ' 人</span></button>' +
+    '<button id="vtog-ret" class="vtog" onclick="switchVisitorMode(\'return\')">重複<span class="vtog-count">' + _analyticsCache.returnGroup.visitors + ' 人</span></button>' +
     '</div>' +
     '<div id="analytics-mode-grid" class="stat-grid"></div>' +
     '<div class="tab-title" style="margin-top:24px;font-size:0.9rem;">流量來源</div>' +
@@ -168,22 +201,28 @@ async function loadAnalytics() {
     '<p class="analytics-note">數據反映今日截至目前的訪客行為，每次開啟自動更新</p>' +
     '<div style="text-align:center;margin-top:20px;"><button onclick="resetAnalytics()" class="btn-reset-analytics">數據重置</button></div>';
 
-  renderAnalyticsMode('new');
+  renderAnalyticsMode('all');
 }
 
 function renderAnalyticsMode(mode) {
   if (!_analyticsCache) return;
-  var group = mode === 'new' ? _analyticsCache.newGroup : _analyticsCache.returnGroup;
+  var group;
+  if (mode === 'new') group = _analyticsCache.newGroup;
+  else if (mode === 'return') group = _analyticsCache.returnGroup;
+  else group = _analyticsCache.allGroup;
+
   var grid = document.getElementById('analytics-mode-grid');
   if (grid) {
     grid.innerHTML = group.rows.map(function(r) {
       return '<div class="stat-card"><span class="stat-value">' + r.value + '</span><span class="stat-label">' + r.label + '</span></div>';
     }).join('');
   }
-  var btnNew = document.getElementById('vtog-new');
-  var btnRet = document.getElementById('vtog-ret');
-  if (btnNew) btnNew.classList.toggle('active', mode === 'new');
-  if (btnRet) btnRet.classList.toggle('active', mode === 'return');
+  ['all','new','ret'].forEach(function (k) {
+    var btn = document.getElementById('vtog-' + k);
+    if (!btn) return;
+    var target = k === 'all' ? 'all' : (k === 'new' ? 'new' : 'return');
+    btn.classList.toggle('active', mode === target);
+  });
 }
 
 function switchVisitorMode(mode) { renderAnalyticsMode(mode); }
@@ -191,7 +230,7 @@ function switchVisitorMode(mode) { renderAnalyticsMode(mode); }
 async function resetAnalytics() {
   if (!confirm('確定要清除今日所有數據並重新計算嗎？此操作無法復原。')) return;
   var resetTime = new Date().toISOString();
-  var { error } = await sb.from('settings').upsert({ key: 'analytics_reset_at', value: resetTime });
+  var { error } = await sb.from('settings').upsert({ store_id: myStore.id, key: 'analytics_reset_at', value: resetTime }, { onConflict: 'store_id,key' });
   if (error) { showToast('重置失敗：' + error.message, 'error'); return; }
   showToast('今日數據已清除，重新計算中…');
   loadAnalytics();
@@ -208,6 +247,7 @@ async function loadPhotos() {
   const { data, error } = await sb
     .from('photos')
     .select('*')
+    .eq('store_id', myStore.id)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true });
 
@@ -229,7 +269,6 @@ function renderPhotos() {
     const isYT = item.media_type === 'youtube';
     const ytId = isYT ? getYouTubeId(item.url) : null;
 
-    // 縮圖：YouTube 用官方縮圖，圖片用本身 URL
     const thumbHtml = isYT && ytId
       ? [
           '<div class="photo-thumb" style="background:#000;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">',
@@ -239,7 +278,6 @@ function renderPhotos() {
         ].join('')
       : '<img src="' + item.url + '" alt="照片" class="photo-thumb">';
 
-    // 影片只顯示網址（唯讀），圖片顯示可編輯的連結輸入框
     const inputHtml = isYT
       ? '<p style="font-size:0.78rem;color:#8b7355;word-break:break-all;margin:0;">' + item.url + '</p>'
       : '<input type="url" class="photo-link-input" data-id="' + item.id + '" value="' + (item.link_url || '') + '" placeholder="點擊後開啟的連結網址（選填）">';
@@ -307,6 +345,11 @@ function processImage(file) {
   });
 }
 
+// 強制把所有 storage 路徑加上 store_id 前綴
+function storagePath(filename) {
+  return myStore.id + '/' + filename;
+}
+
 document.getElementById('photo-upload').addEventListener('change', async function (e) {
   const files = Array.from(e.target.files);
   if (!files.length) return;
@@ -326,8 +369,8 @@ document.getElementById('photo-upload').addEventListener('change', async functio
 
     labelEl.textContent = '上傳中 ' + (i + 1) + '/' + files.length + '…';
     const base        = Date.now() + '-' + Math.random().toString(36).slice(2);
-    const pathDesktop = base + '.webp';
-    const pathMobile  = base + '_m.webp';
+    const pathDesktop = storagePath(base + '.webp');
+    const pathMobile  = storagePath(base + '_m.webp');
 
     const { error: e1 } = await sb.storage.from('photos').upload(pathDesktop, desktop);
     if (e1) { showToast('上傳失敗：' + e1.message, 'error'); continue; }
@@ -338,11 +381,13 @@ document.getElementById('photo-upload').addEventListener('change', async functio
     const { data: pub2 } = sb.storage.from('photos').getPublicUrl(pathMobile);
 
     await sb.from('photos').insert({
+      store_id:     myStore.id,
       storage_path: pathDesktop,
       url:          pub1.publicUrl,
       url_mobile:   pub2 ? pub2.publicUrl : '',
       link_url:     '',
-      sort_order:   Date.now()
+      sort_order:   Date.now(),
+      media_type:   'image'
     });
 
     showToast('WebP 轉換完成，節省 ' + saving + '%（' + sizeKB + ' KB）');
@@ -355,7 +400,7 @@ document.getElementById('photo-upload').addEventListener('change', async functio
 
 async function savePhotoLink(id) {
   const input = document.querySelector('.photo-link-input[data-id="' + id + '"]');
-  const { error } = await sb.from('photos').update({ link_url: input.value }).eq('id', id);
+  const { error } = await sb.from('photos').update({ link_url: input.value }).eq('id', id).eq('store_id', myStore.id);
   if (error) { showToast('儲存失敗', 'error'); return; }
   showToast('連結已儲存');
 }
@@ -375,8 +420,8 @@ function replacePhoto(id, oldStoragePath) {
     var sizeKB = Math.round(processed.compressedSize / 1024);
 
     var base        = Date.now() + '-' + Math.random().toString(36).slice(2);
-    var pathDesktop = base + '.webp';
-    var pathMobile  = base + '_m.webp';
+    var pathDesktop = storagePath(base + '.webp');
+    var pathMobile  = storagePath(base + '_m.webp');
 
     var { error: e1 } = await sb.storage.from('photos').upload(pathDesktop, processed.desktop);
     if (e1) { showToast('上傳失敗：' + e1.message, 'error'); return; }
@@ -389,10 +434,9 @@ function replacePhoto(id, oldStoragePath) {
       storage_path: pathDesktop,
       url:          pub1.publicUrl,
       url_mobile:   pub2 ? pub2.publicUrl : ''
-    }).eq('id', id);
+    }).eq('id', id).eq('store_id', myStore.id);
     if (e2) { showToast('更新失敗：' + e2.message, 'error'); return; }
 
-    // Delete old files after DB update succeeds
     if (oldStoragePath) {
       await sb.storage.from('photos').remove([
         oldStoragePath,
@@ -435,12 +479,10 @@ function closeYtModal() {
 document.getElementById('open-yt-modal-btn').addEventListener('click', openYtModal);
 document.getElementById('yt-modal-cancel').addEventListener('click', closeYtModal);
 
-// 點遮罩關閉
 document.getElementById('yt-modal').addEventListener('click', function (e) {
   if (e.target === this) closeYtModal();
 });
 
-// 貼上網址即時預覽影片
 document.getElementById('yt-modal-input').addEventListener('input', function () {
   var vid = getYouTubeId(this.value.trim());
   var preview = document.getElementById('yt-modal-preview');
@@ -453,7 +495,6 @@ document.getElementById('yt-modal-input').addEventListener('input', function () 
   }
 });
 
-// 確認新增
 document.getElementById('yt-modal-confirm').addEventListener('click', async function () {
   var url = document.getElementById('yt-modal-input').value.trim();
   if (!url) { showToast('請先貼上 YouTube 網址', 'error'); return; }
@@ -466,6 +507,7 @@ document.getElementById('yt-modal-confirm').addEventListener('click', async func
   btn.textContent = '新增中…';
 
   var { error } = await sb.from('photos').insert({
+    store_id:     myStore.id,
     storage_path: '',
     url:          url,
     link_url:     '',
@@ -483,15 +525,15 @@ document.getElementById('yt-modal-confirm').addEventListener('click', async func
   loadPhotos();
 });
 
-async function deletePhoto(id, storagePath, mediaType) {
+async function deletePhoto(id, storagePathStr, mediaType) {
   const label = mediaType === 'youtube' ? '這部影片' : '這張照片';
   if (!confirm('確定要刪除' + label + '嗎？')) return;
-  if (mediaType !== 'youtube' && storagePath) {
-    const paths = [storagePath];
-    if (storagePath.endsWith('.webp')) paths.push(storagePath.replace('.webp', '_m.webp'));
+  if (mediaType !== 'youtube' && storagePathStr) {
+    const paths = [storagePathStr];
+    if (storagePathStr.endsWith('.webp')) paths.push(storagePathStr.replace('.webp', '_m.webp'));
     await sb.storage.from('photos').remove(paths);
   }
-  await sb.from('photos').delete().eq('id', id);
+  await sb.from('photos').delete().eq('id', id).eq('store_id', myStore.id);
   showToast('已刪除');
   loadPhotos();
 }
@@ -507,17 +549,15 @@ async function movePhoto(id, dir) {
   const orderA = a.sort_order;
   const orderB = b.sort_order;
 
-  // Instant visual swap — no waiting for DB
   allPhotos[idx] = b;
   allPhotos[targetIdx] = a;
   renderPhotos();
 
-  // Sync to DB in background
   a.sort_order = orderB;
   b.sort_order = orderA;
   await Promise.all([
-    sb.from('photos').update({ sort_order: orderB }).eq('id', a.id),
-    sb.from('photos').update({ sort_order: orderA }).eq('id', b.id)
+    sb.from('photos').update({ sort_order: orderB }).eq('id', a.id).eq('store_id', myStore.id),
+    sb.from('photos').update({ sort_order: orderA }).eq('id', b.id).eq('store_id', myStore.id)
   ]);
 }
 
@@ -534,18 +574,17 @@ async function movePhotoTo(id) {
   allPhotos.splice(targetIdx, 0, item);
   renderPhotos();
 
-  // Reassign sort_orders for all items to keep order stable
   const base = Date.now();
   await Promise.all(allPhotos.map(function (p, i) {
     p.sort_order = base + i;
-    return sb.from('photos').update({ sort_order: base + i }).eq('id', p.id);
+    return sb.from('photos').update({ sort_order: base + i }).eq('id', p.id).eq('store_id', myStore.id);
   }));
 }
 
 // ── Settings ─────────────────────────────────────────────
 
 async function loadSettings() {
-  const { data, error } = await sb.from('settings').select('*');
+  const { data, error } = await sb.from('settings').select('key,value').eq('store_id', myStore.id);
   if (error || !data) return;
 
   function get(k) {
@@ -580,8 +619,10 @@ document.getElementById('settings-form').addEventListener('submit', async functi
   btn.disabled = true;
   btn.textContent = '儲存中…';
 
+  const storeName = document.getElementById('s-store-name').value.trim();
+
   const pairs = [
-    ['store_name',           document.getElementById('s-store-name').value],
+    ['store_name',           storeName],
     ['store_tagline',        document.getElementById('s-store-tagline').value],
     ['phone_number',         document.getElementById('s-phone').value],
     ['reservation_url',      document.getElementById('s-res-url').value],
@@ -597,8 +638,16 @@ document.getElementById('settings-form').addEventListener('submit', async functi
     ['og_share_description', document.getElementById('s-og-desc').value]
   ];
 
-  const upserts = pairs.map(function (p) { return { key: p[0], value: p[1] }; });
-  const { error } = await sb.from('settings').upsert(upserts, { onConflict: 'key' });
+  const upserts = pairs.map(function (p) { return { store_id: myStore.id, key: p[0], value: p[1] }; });
+  const { error } = await sb.from('settings').upsert(upserts, { onConflict: 'store_id,key' });
+
+  // 同步更新 stores.name（顯示用）
+  if (storeName && storeName !== myStore.name) {
+    await sb.from('stores').update({ name: storeName, updated_at: new Date().toISOString() }).eq('id', myStore.id);
+    myStore.name = storeName;
+    var nameEl = document.getElementById('store-name-display');
+    if (nameEl) nameEl.textContent = storeName + '（/' + myStore.slug + '）';
+  }
 
   btn.disabled = false;
   btn.textContent = '儲存設定';
@@ -615,7 +664,6 @@ document.getElementById('s-og-image-upload').addEventListener('change', async fu
 
   showToast('處理中…');
 
-  // 強制轉 JPEG，確保 LINE / FB 可正確顯示
   const { blob, width, height } = await new Promise(function (resolve) {
     var reader = new FileReader();
     reader.onload = function (ev) {
@@ -636,7 +684,7 @@ document.getElementById('s-og-image-upload').addEventListener('change', async fu
     reader.readAsDataURL(file);
   });
 
-  const uploadPath = 'og/share-' + Date.now() + '.jpg';
+  const uploadPath = storagePath('og/share-' + Date.now() + '.jpg');
   const { error } = await sb.storage.from('photos').upload(
     uploadPath, new File([blob], 'share.jpg', { type: 'image/jpeg' }), { upsert: true }
   );
@@ -644,10 +692,10 @@ document.getElementById('s-og-image-upload').addEventListener('change', async fu
 
   const { data: pub } = sb.storage.from('photos').getPublicUrl(uploadPath);
   await sb.from('settings').upsert([
-    { key: 'og_share_image_url',    value: pub.publicUrl },
-    { key: 'og_share_image_width',  value: String(width) },
-    { key: 'og_share_image_height', value: String(height) }
-  ], { onConflict: 'key' });
+    { store_id: myStore.id, key: 'og_share_image_url',    value: pub.publicUrl },
+    { store_id: myStore.id, key: 'og_share_image_width',  value: String(width) },
+    { store_id: myStore.id, key: 'og_share_image_height', value: String(height) }
+  ], { onConflict: 'store_id,key' });
 
   const prev = document.getElementById('s-og-img-preview');
   prev.src = pub.publicUrl;
@@ -659,7 +707,7 @@ document.getElementById('s-og-image-upload').addEventListener('change', async fu
 // ── Promo ────────────────────────────────────────────────
 
 async function loadPromo() {
-  const { data, error } = await sb.from('settings').select('*');
+  const { data, error } = await sb.from('settings').select('key,value').eq('store_id', myStore.id);
   if (error || !data) return;
 
   function get(k) {
@@ -681,14 +729,14 @@ document.getElementById('promo-image-upload').addEventListener('change', async f
   const file = e.target.files[0];
   if (!file) return;
 
-  const ext  = file.name.split('.').pop();
-  const path = 'promo/promo-' + Date.now() + '.' + ext;
+  const ext  = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const path = storagePath('promo/promo-' + Date.now() + '.' + ext);
 
   const { error } = await sb.storage.from('photos').upload(path, file, { upsert: true });
   if (error) { showToast('圖片上傳失敗', 'error'); e.target.value = ''; return; }
 
   const { data: pubData } = sb.storage.from('photos').getPublicUrl(path);
-  await sb.from('settings').upsert({ key: 'promo_image_url', value: pubData.publicUrl }, { onConflict: 'key' });
+  await sb.from('settings').upsert({ store_id: myStore.id, key: 'promo_image_url', value: pubData.publicUrl }, { onConflict: 'store_id,key' });
 
   const prevEl = document.getElementById('promo-img-preview');
   prevEl.src = pubData.publicUrl;
@@ -703,12 +751,12 @@ document.getElementById('save-promo-btn').addEventListener('click', async functi
   btn.textContent = '儲存中…';
 
   const upserts = [
-    { key: 'promo_active',  value: document.getElementById('promo-toggle').checked ? 'true' : 'false' },
-    { key: 'promo_title',   value: document.getElementById('promo-title-input').value },
-    { key: 'promo_content', value: document.getElementById('promo-content-input').value }
+    { store_id: myStore.id, key: 'promo_active',  value: document.getElementById('promo-toggle').checked ? 'true' : 'false' },
+    { store_id: myStore.id, key: 'promo_title',   value: document.getElementById('promo-title-input').value },
+    { store_id: myStore.id, key: 'promo_content', value: document.getElementById('promo-content-input').value }
   ];
 
-  const { error } = await sb.from('settings').upsert(upserts, { onConflict: 'key' });
+  const { error } = await sb.from('settings').upsert(upserts, { onConflict: 'store_id,key' });
 
   btn.disabled = false;
   btn.textContent = '儲存優惠設定';
@@ -732,14 +780,25 @@ function showToast(msg, type) {
 async function init() {
   if (!initSupabase()) return;
 
-  sb.auth.onAuthStateChange(function (event, session) {
-    if (session) showAdmin();
-    else         showLogin();
+  sb.auth.onAuthStateChange(async function (event, session) {
+    if (session) {
+      var s = await loadMyStore();
+      if (s) showAdmin();
+      // 如果讀不到 store（profile 不存在），就維持 login 畫面但顯示錯誤
+    } else {
+      myStore = null;
+      showLogin();
+    }
   });
 
   const { data: { session } } = await sb.auth.getSession();
-  if (session) showAdmin();
-  else         showLogin();
+  if (session) {
+    var s = await loadMyStore();
+    if (s) showAdmin();
+    else { showLogin(); /* profile 不存在，可能是新註冊但未呼叫 RPC */ }
+  } else {
+    showLogin();
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#8b5e3c">
+  <title>店家一頁式網站平台</title>
+  <meta name="description" content="3 分鐘為你的店建立一頁式網站，附後台與數據統計，免費起步。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/platform.css">
+</head>
+<body>
+  <header class="p-header">
+    <h1 class="p-brand">🏪 店家網站平台</h1>
+    <nav class="p-nav">
+      <a href="/login">登入</a>
+      <a href="/signup" class="p-cta-sm">免費註冊</a>
+    </nav>
+  </header>
+
+  <main class="p-hero">
+    <h2>3 分鐘為你的店建立<br>一頁式網站</h2>
+    <p class="p-sub">附後台、照片管理、訪客數據統計、SEO 優化、Google Map 嵌入。免費起步。</p>
+    <div class="p-cta-row">
+      <a href="/signup" class="p-btn p-btn-primary">免費註冊 →</a>
+      <a href="/login" class="p-btn p-btn-secondary">已有帳號，登入</a>
+    </div>
+    <p class="p-note">註冊後即取得 <code>yourdomain.com/你的店名</code> 專屬網址</p>
+  </main>
+
+  <section class="p-features">
+    <div class="p-card">
+      <div class="p-icon">📸</div>
+      <h3>照片自動最佳化</h3>
+      <p>上傳即轉 WebP、自動產出 mobile/desktop 兩種尺寸，首屏圖優先載入。</p>
+    </div>
+    <div class="p-card">
+      <div class="p-icon">📊</div>
+      <h3>8 項即時數據</h3>
+      <p>進站率、首圖留存、跳出率、看完率、CTA / 電話點擊轉換。新舊客分流統計。</p>
+    </div>
+    <div class="p-card">
+      <div class="p-icon">🔍</div>
+      <h3>SEO + AI 搜尋</h3>
+      <p>自動產生 Schema.org Restaurant + FAQPage，AI 搜尋引擎也找得到你。</p>
+    </div>
+    <div class="p-card">
+      <div class="p-icon">🔒</div>
+      <h3>資料完全隔離</h3>
+      <p>每家店資料完全獨立，Row Level Security 保護，看不到別人也不被看到。</p>
+    </div>
+  </section>
+
+  <footer class="p-footer">
+    <p>© <span id="year"></span> 店家網站平台</p>
+  </footer>
+
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>

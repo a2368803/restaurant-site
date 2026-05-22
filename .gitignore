@@ -1,2 +1,4 @@
-SETUP.md
-supabase-setup.sql
+.vercel
+.env
+.env.local
+node_modules
